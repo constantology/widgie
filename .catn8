@@ -1,0 +1,29 @@
+{
+	"source"    : {
+		"dir"   : "./src",
+		"files" : [
+					"lib", "vars", "util", "api", "tpl", "expose",
+
+				  	"util/qs", "util/Gesture", "util/TypedHash", "util/Validate",
+
+				  	"proxy/Ajax",
+				  	"data/Node", "data/Schema", "data/Store",
+
+				  	"mixins/DataProcessor", "mixins/DataView",
+				  	"mixins/ClsSlc", "mixins/DOMRefs",
+				  	"mixins/Renderer", "mixins/BoxRenderer",
+				  	"mixins/Validation",
+
+				  	"layout/Layout",
+
+				  	"Component", "Box", "Form", "Field",
+
+				  	"Error", "bootstrap", "Viewport"
+				  ]
+	},
+	"target"    : {
+		"dir"   : "{pwd}",
+		"min"   : true
+	},
+	"type"      : "application/javascript"
+}

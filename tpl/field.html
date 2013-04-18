@@ -1,0 +1,11 @@
+{% sub label %}
+<label class="{{ clsBase }}-label" data-ref="label" for="{{ id }}">{{ label }}</label>
+{% endsub %}
+{% sub placeholder %}
+placeholder="{% if placeholder === ':label' %}{{ label }}{% else %}{{ placeholder }}{% endif %}"
+{% endsub %}
+<{{ @.tagName }} class="{{ @.clsBase }} {{ @.clsDefault if @.clsDefault|exists }} {{ @.cls if @.cls|exists }}"{% if @.errorMsg %} data-error-msg="{{ @.errorMsg }}"{% endif %} tabindex="-1"><div class="{{ @.clsBase }}-ct" data-ref="ct"{% if @.toolTip %} data-tool-tip="{{ @.toolTip }}"{% endif %}>
+	{% if @.showLabel AND @.labelPosition !== 'after' %}{{ @|parse:"label" }}{% endif %}
+	<span class="{{ @.clsBase }}-input-ct"><input class="{{ @.clsBase }}-input" data-ref="field" id="{{ @.id }}" name="{{ @.name }}" {{ @|parse:"placeholder" if @.placeholder|type:"string" }} type="{{ @._inputType }}" value="{{ @.value if @.value|exists }}" /></span>
+	{% if @.showLabel AND @.labelPosition === 'after' %}{{ @|parse:"label" }}{% endif %}
+</div></{{ @.tagName }}>
