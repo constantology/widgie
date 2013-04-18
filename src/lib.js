@@ -81,6 +81,14 @@
 	}
 
 	function handleBubble( evt ) {
+		switch ( evt.type ) {
+			case 'blur'  :
+			case 'focus' :
+				if ( evt.target === doc.activeElement
+				 && evt.target.getAttribute( 'tabindex' )
+				 && evt.target !== evt.currentTarget )
+					return;
+		}
 		takeAction( evt.currentTarget, evt );
 	}
 

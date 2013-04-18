@@ -1,23 +1,23 @@
 	define( namespace( 'proxy.Ajax' ), function () {
 		function onAbort( xhr, status, err ) {
 			 this.loading = false;
-			!this.interactive || status == 'abort'   || this.broadcast( 'error', err, status, xhr );
+			!this.interactive || status == 'abort'   || this.onReqAbort( xhr, status, err ).broadcast( 'error', err, status, xhr );
 		}
 
 		function onError ( xhr, status, err ) {
 			 this.loading = false;
-			!this.interactive || this.broadcast( 'error', err, status, xhr );
+			!this.interactive || this.onReqError( xhr, status, err ).broadcast( 'error', err, status, xhr );
 		}
 
 		function onLoad ( data, status, xhr ) {
 			 this.loading = false;
-			!this.interactive || typeof data !== 'object' || this.broadcast( 'load', data, status, xhr );
+			!this.interactive || typeof data !== 'object' || this.onReqLoad( data, status, xhr ).broadcast( 'load', data, status, xhr );
 		}
 
 		function onTimeout() {
 			this.loading = false;
 			this.current.abort();
-			this.broadcast( 'timeout', this.current );
+			this.onReqTimeout( this.current ).broadcast( 'timeout', this.current );
 		}
 
 		return {
@@ -58,13 +58,13 @@
 				silent === true || this.broadcast( 'abort', this.current );
 			},
 			disable        : function() {
-				if ( !this.disabled && this.broadcast( 'beforedisable' ) !== false ) {
+				if ( !this.disabled && this.broadcast( 'before:disable' ) !== false ) {
 					this.disabled = true;
 					this.onDisable().broadcast( 'disable' );
 				}
 			},
 			enable         : function() {
-				if ( this.disabled && this.broadcast( 'beforeenable' ) !== false ) {
+				if ( this.disabled && this.broadcast( 'before:enable' ) !== false ) {
 					this.disabled = false;
 					this.onEnable().broadcast( 'enable' );
 				}
@@ -78,13 +78,18 @@
 				/*if ( !navigator.onLine )
 					this.broadcast( 'error:	offline' );
 
-				else*/ if ( this.interactive && this.broadcast( 'beforeload', data, method ) !== false )
+				else*/ if ( this.interactive && this.broadcast( 'before:load', data, method ) !== false )
 					this.onLoadStart( this.createUrl( data = this.prepareData( data ) ), method, data );
 			},
 			reload         : function() {
-				if ( this.lastOptions && this.interactive && this.broadcast( 'beforereload' ) !== false )
+				if ( this.lastOptions && this.interactive && this.broadcast( 'before:reload' ) !== false )
 					this.doRequest( this.lastOptions );
 			},
+// stub overwrite methods
+			onReqAbort     : function() {},
+			onReqError     : function() {},
+			onReqLoad      : function() {},
+			onReqTimeout   : function() {},
 // internal methods
 			createUrl      : function ( params ) {
 				return this.urlBase;
@@ -129,7 +134,7 @@
 			onDisable       : function() { },
 			onEnable        : function() { },
 			onLoadStart     : function( url, method, data ) {
-				return this.doRequest( this.initTransport( url, method, data ) );
+				return this.doRequest( this.initTransport.apply( this, arguments ) );
 			},
 // constructor methods
 			init            : function () {
@@ -143,13 +148,13 @@
 				var cleanups = [this.onBeforeLoad, this.removeTransport];
 
 				this.observe( {
-					abort        : this.removeTransport,
-					beforeload   : cleanups,
-					beforereload : cleanups,
-					error        : this.removeTransport,
-					load         : this.removeTransport,
-					timeout      : this.removeTransport,
-					ctx          : this
+					 abort          : this.removeTransport,
+					'before:load'   : cleanups,
+					'before:reload' : cleanups,
+					 error          : this.removeTransport,
+					 load           : this.removeTransport,
+					 timeout        : this.removeTransport,
+					 ctx            : this
 				} );
 			}
 		};

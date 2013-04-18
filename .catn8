@@ -6,7 +6,7 @@
 
 				  	"util/qs", "util/Gesture", "util/TypedHash", "util/Validate",
 
-				  	"proxy/Ajax",
+				  	"proxy/Ajax", "proxy/CRUD",
 				  	"data/Node", "data/Schema", "data/Store",
 
 				  	"mixins/DataProcessor", "mixins/DataView",
