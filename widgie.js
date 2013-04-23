@@ -235,33 +235,35 @@
 			},
 			re_json = /\/(json|javascript)$/i;
 
-		return function xhr( options ) {
+		return function xhr( config ) {
 			var data, hd, method, req = new XMLHttpRequest();
 
-			req._options    = options;
-			data            = options.data;
-			options.headers = hd = util.copy( options.headers || util.obj(), headers, true );
-			method          = options.method;
-			method          = method ? method.toUpperCase() : 'GET';
+			req._config    = config;
+			data           = config.data;
+			config.headers = hd = util.copy( config.headers || util.obj(), headers, true );
+			method         = config.method;
+			method         = method ? method.toUpperCase() : 'GET';
 
 			req.addEventListener( 'error', req._onerror = onerror.bind( req ), true );
 			req.addEventListener( 'load',  req._onload  = onload.bind( req ), true );
 
-			req.open( method, options.url, true );
+			req.open( method, config.url, true );
 
-			if ( POSTISH.test( method ) && hd['Content-Type'] === headers['Content-Type'] && options.sendJSON !== true )
+			if ( POSTISH.test( method ) && hd['Content-Type'] === headers['Content-Type'] && config.sendJSON !== true )
 				hd['Content-Type'] = 'application/x-www-form-urlencoded;charset=UTF-8';
 
 			!req.overrideMimeType || req.overrideMimeType( hd['Content-Type'] );
 
-			Object.reduce( options.headers, setHeader, req );
+			Object.reduce( config.headers, setHeader, req );
 
-//			req.responseType = 'json';   // noinspection FallthroughInSwitchStatementJS
+//			req.responseType = 'json';
+
+			// noinspection FallthroughInSwitchStatementJS
 			switch ( util.ntype( data ) ) {
 				case 'string'   :
 				case 'formdata' :                                                  break;
 				case 'array'    :
-				case 'object'   : data = options.sendJSON === true
+				case 'object'   : data = config.sendJSON === true
 									   ? JSON.stringify( data )
 									   : __lib__.qs.encode( data ).substring( 1 ); break;
 				default         : data = null;
@@ -276,7 +278,7 @@
 			req.removeEventListener( 'error', req._onerror, true );
 			req.removeEventListener( 'load',  req._onload, true );
 
-			delete req._onerror; delete req._onload; delete req._options;
+			delete req._onerror; delete req._onload; delete req._config;
 
 			return req;
 		}
@@ -301,23 +303,23 @@
 		}
 
 		function onabort( evt ) {
-			var options = this._options;
+			var config = this._config;
 
-			!is_fun( options.abort ) || options.abort( cleanup( this ), options );
+			!is_fun( config.abort ) || config.abort( cleanup( this ), config );
 		}
 
 		function onerror( evt ) {
-			var req     = this,
-				options = req._options;
+			var req    = this,
+				config = req._config;
 
-			!is_fun( options.error ) || options.error( data( req ), req.status, cleanup( req ), options );
+			!is_fun( config.error ) || config.error( data( req ), req.status, cleanup( req ), config );
 		}
 
 		function onload( evt ) {
-			var req     = this,
-				options = req._options;
+			var req    = this,
+				config = req._config;
 
-			!is_fun( options.success ) || options.success( data( req ), req.status, cleanup( req ), options );
+			!is_fun( config.success ) || config.success( data( req ), req.status, cleanup( req ), config );
 		}
 
 		function setHeader( req, val, key ) {
@@ -363,22 +365,26 @@ var config = {
 		return items.valueOf();
 	}
 };
-new Templ8( m8.copy( { id : 'widgie.box', sourceURL : 'tpl/box.html'  }, config ), '<{{ @.tagName }} class=\"{{ @.clsBase }} {{ @.clsDefault if @.clsDefault|exists }} {{ @.cls if @.cls|exists }}\" tabindex=\"-1\">',
+new Templ8( m8.copy( { id : 'widgie.box', sourceURL : 'tpl/box.html'  }, config ), '<{{ @.tagName }} class=\"{{ @.clsBase }} {{ @.clsDefault if @.clsDefault|exists }} {{ @.cls if @.cls|exists }}\"{% if this.focusable !== false %} tabindex=\"-1\"{% endif %}>',
 '	<div class=\"{{ @.clsBase }}-ct\" data-ref=\"ct\"></div>',
 '</{{ @.tagName }}>' );
-new Templ8( m8.copy( { id : 'widgie.component', sourceURL : 'tpl/component.html'  }, config ), '<{{ @.tagName }} class=\"{{ @.clsBase }} {{ @.clsDefault if @.clsDefault|exists }} {{ @.cls if @.cls|exists }}\" tabindex=\"-1\"><div class=\"{{ @.clsBase }}-ct\" data-ref=\"ct\">',
+new Templ8( m8.copy( { id : 'widgie.component', sourceURL : 'tpl/component.html'  }, config ), '<{{ @.tagName }} class=\"{{ @.clsBase }} {{ @.clsDefault if @.clsDefault|exists }} {{ @.cls if @.cls|exists }}\"{% if this.focusable !== false %} tabindex=\"-1\"{% endif %}><div class=\"{{ @.clsBase }}-ct\" data-ref=\"ct\">',
 '	{{ @.html if @.html|type:\"string\" }}',
 '	{% if @.tplContent|exists AND @.data|exists %}{{ @|prepare:@.data|parse:@.tplContent }}{% endif %}',
 '</div></{{ @.tagName }}>' );
 new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, config ), '{% sub label %}',
-'<label class=\"{{ clsBase }}-label\" data-ref=\"label\" for=\"{{ id }}\">{{ label }}</label>',
+'<label class=\"{{ clsBase }}-label\" data-ref=\"label\" for=\"{{ id }}-input\">{{ label }}</label>',
 '{% endsub %}',
 '{% sub placeholder %}',
 'placeholder=\"{% if placeholder === \':label\' %}{{ label }}{% else %}{{ placeholder }}{% endif %}\"',
 '{% endsub %}',
-'<{{ @.tagName }} class=\"{{ @.clsBase }} {{ @.clsDefault if @.clsDefault|exists }} {{ @.cls if @.cls|exists }}\"{% if @.errorMsg %} data-error-msg=\"{{ @.errorMsg }}\"{% endif %} tabindex=\"-1\"><div class=\"{{ @.clsBase }}-ct\" data-ref=\"ct\"{% if @.toolTip %} data-tool-tip=\"{{ @.toolTip }}\"{% endif %}>',
+'<{{ @.tagName }} class=\"{{ @.clsBase }} {{ @.clsDefault if @.clsDefault|exists }} {{ @.cls if @.cls|exists }} {{ @.clsBase }}-{{ @.inputType }}\"{% if @.errorMsg %} data-error-msg=\"{{ @.errorMsg }}\"{% endif %} tabindex=\"-1\"><div class=\"{{ @.clsBase }}-ct\" data-ref=\"ct\"{% if @.toolTip %} data-tool-tip=\"{{ @.toolTip }}\"{% endif %}>',
 '	{% if @.showLabel AND @.labelPosition !== \'after\' %}{{ @|parse:\"label\" }}{% endif %}',
-'	<span class=\"{{ @.clsBase }}-input-ct\"><input class=\"{{ @.clsBase }}-input\" data-ref=\"field\" id=\"{{ @.id }}\" name=\"{{ @.name }}\" {{ @|parse:\"placeholder\" if @.placeholder|type:\"string\" }} type=\"{{ @._inputType }}\" value=\"{{ @.value if @.value|exists }}\" /></span>',
+'	<span class=\"{{ @.clsBase }}-input-ct {{ @.clsBase }}-input-{{ @.inputType }}-ct\">{% if @.inputType === \'text\' AND @.multiLine === true %}',
+'		<textarea class=\"{{ @.clsBase }}-input {{ @.clsBase }}-input-multiline {{ @.clsBase }}-input-{{ @.inputType }}\" data-ref=\"field\" id=\"{{ @.id }}-input\" name=\"{{ @.name }}\" {{ @|parse:\"placeholder\" if @.placeholder|type:\"string\" }}></textarea>',
+'	{% else %}',
+'		<input class=\"{{ @.clsBase }}-input {{ @.clsBase }}-input-{{ @.inputType }}\" data-ref=\"field\" id=\"{{ @.id }}-input\" name=\"{{ @.name }}\" {{ @|parse:\"placeholder\" if @.placeholder|type:\"string\" }} type=\"{{ @._inputType }}\" value=\"{{ @.value if @.value|exists }}\" />',
+'	{% endif %}</span>',
 '	{% if @.showLabel AND @.labelPosition === \'after\' %}{{ @|parse:\"label\" }}{% endif %}',
 '</div></{{ @.tagName }}>' );
 }();
@@ -867,7 +873,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 /*~  src/util/Validate.js  ~*/
 
 	util.def( __lib__, 'Validate', { value : {
-		date   : {
+		date     : {
 			minmax : function( field, value ) {
 				return value <= field.max && value >= field.min;
 			},
@@ -881,7 +887,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				return util.ntype( value ) == 'date' && value <= field.max && value >= field.min;
 			}
 		},
-		number : {
+		number   : {
 			minmax : function( field, value ) {
 				return value <= field.max && value >= field.min;
 			},
@@ -893,7 +899,21 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				return util.type( value ) == 'number' && ( field.allowDecimals || Math.floor( value ) === value );
 			}
 		},
-		text   : {
+		checkbox : {
+			minmax : function( field, value ) {
+				return true;
+			},
+			raw    : function( field, value ) {
+				return value;
+			},
+			val    : function( field, value ) {
+				return value;
+			},
+			valid  : function( field, value ) {
+				return !field.elField || field.elField.checked === true;
+			}
+		},
+		text     : {
 			minmax : function( field, value ) {
 				return value.length <= field.max && value.length >= field.min;
 			},
@@ -908,6 +928,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			}
 		}
 	} }, 'cw' );
+	__lib__.Validate.radio    = __lib__.Validate.checkbox;
 	__lib__.Validate.password = __lib__.Validate.text;
 
 
@@ -915,25 +936,24 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 /*~  src/proxy/Ajax.js  ~*/
 
 	define( namespace( 'proxy.Ajax' ), function () {
-		function onAbort( xhr, status, err ) {
+		function onAbort( xhr, config ) {
 			 this.loading = false;
-			!this.interactive || status == 'abort'   || this.onReqAbort( xhr, status, err ).broadcast( 'error', err, status, xhr );
+			!this.interactive || status == 'abort'   || this.onReqAbort( xhr, config ).broadcast( 'abort', err, config );
 		}
 
-		function onError ( xhr, status, err ) {
+		function onError( xhr, status, err, config ) {
 			 this.loading = false;
-			!this.interactive || this.onReqError( xhr, status, err ).broadcast( 'error', err, status, xhr );
+			!this.interactive || this.onReqError( xhr, status, err ).broadcast( 'error', err, status, xhr, config );
 		}
 
-		function onLoad ( data, status, xhr ) {
+		function onLoad ( data, status, xhr, config ) {
 			 this.loading = false;
-			!this.interactive || typeof data !== 'object' || this.onReqLoad( data, status, xhr ).broadcast( 'load', data, status, xhr );
+			!this.interactive || typeof data !== 'object' || this.onReqLoad( data, status, xhr ).broadcast( 'load', data, status, xhr, config );
 		}
 
 		function onTimeout() {
 			this.loading = false;
-			this.current.abort();
-			this.onReqTimeout( this.current ).broadcast( 'timeout', this.current );
+			this.abort().onReqTimeout( this.current ).broadcast( 'timeout', this.current );
 		}
 
 		return {
@@ -966,12 +986,12 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 // public properties
 			loading        : false,
 // internal properties
+			lastConfig     : null,
 			tid            : null,
 
 // public methods
-			abort          : function( silent ) {
+			abort          : function() {
 				!this.current   || this.current.abort();
-				silent === true || this.broadcast( 'abort', this.current );
 			},
 			disable        : function() {
 				if ( !this.disabled && this.broadcast( 'before:disable' ) !== false ) {
@@ -985,7 +1005,11 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 					this.onEnable().broadcast( 'enable' );
 				}
 			},
-			load           : function ( data, method ) {
+			load           : function ( data, method, options ) {
+				if ( is_obj( method ) ) {
+					options = method;
+					method  = UNDEF;
+				}
 				if ( !method || typeof method != 'string' )
 					method = this.method || 'GET';
 
@@ -994,37 +1018,39 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				/*if ( !navigator.onLine )
 					this.broadcast( 'error:	offline' );
 
-				else*/ if ( this.interactive && this.broadcast( 'before:load', data, method ) !== false )
-					this.onLoadStart( this.createUrl( data = this.prepareData( data ) ), method, data );
+				else*/ if ( this.interactive && this.broadcast( 'before:load', data, method, options ) !== false )
+					this.onLoadStart( this.createUrl( data = this.prepareData( data ) ), method, data, options );
 			},
 			reload         : function() {
-				if ( this.lastOptions && this.interactive && this.broadcast( 'before:reload' ) !== false )
-					this.doRequest( this.lastOptions );
+				if ( this.lastConfig && this.interactive && this.broadcast( 'before:reload' ) !== false )
+					this.doRequest( this.lastConfig );
 			},
 // stub overwrite methods
-			onReqAbort     : function() {},
-			onReqError     : function() {},
-			onReqLoad      : function() {},
-			onReqTimeout   : function() {},
+			onReqAbort     : function( xhr, config ) {},
+			onReqError     : function( xhr, status, err, config ) {},
+			onReqLoad      : function( data, status, xhr, config ) {},
+			onReqTimeout   : function( config ) {},
 // internal methods
 			createUrl      : function ( params ) {
 				return this.urlBase;
 			},
 			doRequest      : function( transport ) {
-				this.lastOptions = transport;
-				this.loading     = true;
-				this.current     = api.xhr( transport );
-				this.tid         = setTimeout( this.onTimeout, this.timeout );
+				this.lastConfig = transport;
+				this.loading    = true;
+				this.current    = api.xhr( transport );
+				this.tid        = setTimeout( this.onTimeout, this.timeout );
 
 				this.broadcast( 'loadstart' );
 
 				return this.current;
 			},
-			initTransport  : function( url, method, data ) {
+			initTransport  : function( url, method, data, options ) {
 				var transport = {
+					abort   : this.onAbort,
 					error   : this.onError,
 					headers : this.headers,
 					method  : method || this.method,
+					options : options,
 					success : this.onLoad,
 					url     : url
 				};
@@ -1043,17 +1069,19 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				clearTimeout( this.tid );
 				delete this.tid;
 			},
+
 // stub methods
 			onBeforeLoad    : function () {
 				!this.current || this.abort( true );
 			},
 			onDisable       : function() { },
 			onEnable        : function() { },
-			onLoadStart     : function( url, method, data ) {
+			onLoadStart     : function( url, method, data, options ) {
 				return this.doRequest( this.initTransport.apply( this, arguments ) );
 			},
 // constructor methods
 			init            : function () {
+				this.onAbort   = onAbort.bind( this );
 				this.onError   = onError.bind( this );
 				this.onLoad    = onLoad.bind( this );
 				this.onTimeout = onTimeout.bind( this );
@@ -1107,40 +1135,35 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			api            : null,
 
 // public methods
-			create         : function( data ) {
-				this.onAPICall( 'create', data );
+			create         : function( data, options ) {
+				this.onAPICall( 'create', data, options );
 			},
-			delete         : function( data ) {
-				this.onAPICall( 'read', data );
+			delete         : function( data, options ) {
+				this.onAPICall( 'delete', data, options );
 			},
-			read           : function( data ) {
-				this.onAPICall( 'read', data );
+			read           : function( data, options ) {
+				this.onAPICall( 'read', data, options );
 			},
-			update         : function( data ) {
-				this.onAPICall( 'update', data );
-//				if ( this.interactive && this.broadcast( 'before:update', data ) !== false )
-//					this.onLoadStart( this.api.update.url, this.api.update.method, data = this.prepareData( data ), 'update' );
+			update         : function( data, options ) {
+				this.onAPICall( 'update', data, options );
 			},
 // stub overwrite methods
-			onAPICall      : function( command, data ) {
+			onAPICall      : function( command, data, options ) {
 				var api = this.api[command];
-				if ( api && this.interactive && this.broadcast( 'before:' + command, data ) !== false )
-					this.onLoadStart( api.url, api.method, data = this.prepareData( data, api ), command );
+				if ( api && this.interactive && this.broadcast( 'before:' + command, data, options ) !== false )
+					this.onLoadStart( api.url, api.method, data = this.prepareData( data, api ), options, command );
 			},
-			onReqAbort     : function( xhr, status, err ) {
-				var trans = this.lastOptions;
-				this.broadcast( 'abort:' + trans.type, xhr, status, err );
+			onReqAbort     : function( xhr, options ) {
+				this.broadcast( 'abort:' + options.type, xhr, status, err );
 			},
-			onReqError     : function( xhr, status, err ) {
-				var trans = this.lastOptions;
-				this.broadcast( 'error:' + trans.type, xhr, status, err );
+			onReqError     : function( xhr, status, err, options ) {
+				this.broadcast( 'error:' + options.type, xhr, status, err );
 			},
-			onReqLoad      : function( data, status, xhr ) {
-				var trans = this.lastOptions;
-				this.broadcast( trans.type, data, status, xhr );
+			onReqLoad      : function( data, status, xhr, options ) {
+				this.broadcast( options.type, data, status, xhr );
 			},
-			onLoadStart     : function( url, method, data, type ) {
-				return this.parent( url, method, data, type || 'read' );
+			onLoadStart     : function( url, method, data, options, command ) {
+				return this.parent( url, method, data, options, command || 'read' );
 			},
 // internal methods
 			initTransport  : function( url, method, data, type ) {
@@ -1181,6 +1204,265 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				return ctx;
 			}
 		};
+	}() );
+
+
+
+/*~  src/proxy/ModelSync.js  ~*/
+
+	define( namespace( 'proxy.ModelSync' ), function () {
+		return {
+			extend         : namespace( 'proxy.CRUD' ),
+			module         : __lib__,
+
+// instance configuration
+			api            : null,
+
+// public methods
+			sync           : function( model ) {
+				var cmd = 'read';
+
+				if ( model.dirty )
+					cmd = this.exists ? 'update' : 'create';
+
+				!( cmd in this ) || this[cmd]( model );
+			},
+// stub overwrite methods
+			onLoadStart     : function( model ) {
+				this.queue[model.id] = model;
+
+			},
+// internal methods
+			initTransport   : function( model ) {
+				var args      = Array.coerce( arguments, 1 ),
+					transport = this.parent.apply( this, args );
+
+				transport.model = model;
+
+				return transport;
+			},
+// constructor methods
+			init            : function() {
+				this.parent( arguments );
+				this.queue = util.obj();
+			}
+		};
+	}() );
+
+
+
+/*~  src/data/Model.js  ~*/
+
+	define( namespace( 'data.Model' ), function() {
+		var count = 999;
+
+		return {
+// class configuration
+			afterdefine    : function( Model ) {
+				var p = Model.prototype, schema = p.schema; // noinspection FallthroughInSwitchStatementJS
+				switch ( util.ntype( schema ) ) {
+					case 'array'    : schema = { properties : schema }; // allow fall-through
+					case 'object'   : schema = schema instanceof getClass( 'data.Schema' )
+											 ? schema
+											 : create( 'data.Schema', schema );
+											   break;
+					case 'function' : schema = new Schema;
+				}
+				Model.__schema__ = schema;
+			},
+			beforeinstance : function( Model, instance ) {
+				instance.schema = Model.__schema__;
+			},
+			constructor    : function DataModel( raw ) {
+				this.changes = util.obj();
+				this.dom     = util.obj();
+				this.raw     = raw;
+				this.src     = this.schema.coerceItem( raw );
+
+				var id       = this.src[schema.mappings.id] || raw[schema.mappings.id];
+				this.exists  = !!id;
+				this.id      = id || 'phantom-' + ( ++count );
+
+				this.setProxy( this.proxy );
+
+				if ( this.exists ) {
+					util.len( this.src ) || this.autoLoad === false || this.sync();
+					this.set( 'id', id );
+				}
+			},
+			extend         : 'Observer',
+			module         :  __lib__,
+
+			proxy          : null,
+			schema         : null,
+// instance configuration
+			autoLoad       : true,
+			autoSync       : false,
+// accessors
+			dirty          : {
+				get        : function() { return !!util.len( this.changes ); },
+				set        : function() { return this.dirty; }
+			},
+// public properties
+			changes        : null,
+			id             : null,
+// internal properties
+			dom            : null,
+			exists         : false,
+			raw            : null,
+			slc            : null,
+			src            : null,
+			suspendChange  : 0,
+			suspendSync    : 0,
+
+// public methods
+			get            : function( key ) {
+				return this.src[key];
+			},
+			getBoundEl     : function( cmp ) {
+				return this.dom[is_str( cmp ) ? cmp : cmp.id] || null;
+			},
+			revert         : function( key ) {
+				if ( !is_str( key ) ) {
+					Object.keys( this.changes ).forEach( this.revert, this );
+					return;
+				}
+				if ( key in this.changes ) {
+					this.set( key, this.changes[key] );
+					delete this.changes[key];
+				}
+			},
+			set            : function( key, val, noupdate ) {
+				if ( is_obj( key ) ) {
+					if ( is_bool( val ) )
+						noupdate = val;
+
+					this.suspendChange || ++this.suspendChange;
+					Object.reduce( key, function( ctx, v, k ) {
+						return ctx.onSet( k, v, true );
+					}, this );
+					!this.suspendChange || --this.suspendChange;
+
+					noupdate === true || this.syncView();
+
+					this.broadcast( 'change' );
+
+					return;
+				}
+
+				this.onSet( key, val, noupdate );
+
+				noupdate === true || this.syncView();
+			},
+			sync           : function() {
+				if ( this.suspendSync ) return;
+
+				this.proxy.sync( this );
+			},
+			toJSON         : function() {
+				var json = Object.reduce( this.src, toJSON, util.obj() );
+
+				if ( this.exists )
+					json.id = this.id;
+				else
+					delete json.id;
+
+				return json;
+			},
+// internal methods
+			bindView       : function( cmp, el ) {
+				switch ( util.type( el ) ) {
+					case 'element[]'   :                   break;
+					case 'htmlelement' : el = api.$( el ); break;
+					default            :
+						if ( !( el = cmp.$el.find( this.slc ) ).size )
+							return;
+				}
+
+				this.dom[cmp.id] = el.attr( 'data-node-id', this.id );
+			},
+			onSet         : function( key, val, noupdate ) {
+				var change = false, clean, schema = this.schema, prop = schema.prop;
+
+				if ( key in prop ) {
+					clean = prop[key].coerce( val );
+					if ( clean !== this.src[key] ) {
+						this.raw[key]     = val;
+						this.changes[key] = this.src[key];
+						this.src[key]     = clean;
+						this.suspendChange || this.broadcast( 'change' );
+						this.broadcast( 'change:' + key, this.src[key], this.changes[key] );
+					}
+				}
+
+				if ( key === schema.mappings.id ) {
+					this.id  = this.src[key] || val;
+					this.slc = '[data-id="' + this.id + '"], [data-node-id="' + this.id + '"]';
+				}
+			},
+			setProxy      : function( proxy ) { // noinspection FallthroughInSwitchStatementJS
+				switch ( util.ntype( proxy ) ) {
+					case 'string' : proxy = { urlBase : proxy }; // allow fall-through
+					case 'object' :
+						if ( !( proxy instanceof getClass( 'proxy.Ajax' ) ) )
+							proxy  = create( 'proxy.ModelSync', proxy );
+
+						this.proxy = proxy;
+						break;
+					default       : ++this.suspendSync;
+				}
+			},
+			setSchema     : function( schema ) { // noinspection FallthroughInSwitchStatementJS
+				switch ( util.ntype( schema ) ) {
+					case 'array'  : schema = { properties : schema }; // allow fall-through
+					case 'object' :
+						if ( !( schema instanceof getClass( 'data.Schema' ) ) )
+							schema  = create( 'data.Schema', schema );
+
+						this.schema = schema;
+						break;
+				}
+			},
+			syncView       : function() {
+				Object.reduce( this.dom, syncView, this );
+			}
+		};
+
+		function syncData( cmd, proxy, data, status, xhr ) {
+			var id, m = this.schema.mappings;
+			if ( is_obj( data ) )
+				id   = data[m.id]   || data[m.item][m.id];
+				data = data[m.item] || data;
+
+			if ( is_obj( data ) ) { // noinspection FallthroughInSwitchStatementJS
+				switch ( cmd ) {
+					case 'read'   :
+					case 'update' : this.set( data );                      break;
+					case 'create' : !id || this.set( 'id', this.id = id ); break;
+				}
+
+				this.broadcast( cmd, data, status, xhr );
+			}
+		}
+		function syncView( node, el, cmp_id ) {
+			el.attr( 'data-node-id', node.id );
+
+			Object.keys( node.changes ).forEach( function( key ) { // we're looping through changed properties to save time
+				el.find( '[data-node-binding="' + key + '"]' ).html( this[key] ); // but we're applying the new values
+			}, node.src );
+
+			return node;
+		}
+		function toJSON( json, val, key ) {
+//			var prop = this.schema.prop;
+
+//			if ( prop[key] && prop[key].model instanceof getClass( 'data.Model' ) )
+//				json[key] = val.toJSON();
+//			else
+				json[key] = val;
+
+			return json;
+		}
 	}() );
 
 
@@ -1399,6 +1681,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 					name     : error.code.DATA_SCHEMA_TYPE
 				} );
 
+				// noinspection FallthroughInSwitchStatementJS
 				switch ( util.ntype( this.format ) ) {
 					case 'function' :
 					case 'string'   : break;
@@ -1416,6 +1699,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			default     : null,
 			format      : null,
 			id          : null,
+			model       : null,
 			type        : 'object',
 
 	// internal properties
@@ -1588,10 +1872,10 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 // public methods
 			add           : function( data, silent ) {
 				if ( is_arr( data ) ) {
-					++this.suspendChange;
-					data.forEach( this.add, this );
-					--this.suspendChange;
-					return this.onChangeData( silent );
+					 this.suspendChange || ++this.suspendChange;
+					 data.forEach( this.add, this );
+					!this.suspendChange || --this.suspendChange;
+					 return this.onChangeData( silent );
 				}
 
 				var node = this.onAdd( data );
@@ -1630,18 +1914,11 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				silent === true || this.broadcast( 'empty:stash' );
 				this.onChangeView( silent );
 			},
-			first         : function() { return this.getAt( 0 ); },
-			fetch         : function( params ) {
+			fetch         : function( params, options ) {
 				if ( this.proxy ) {
-					this.proxy.load( this.prepare( params ) );
+					this.proxy.load( this.prepare( params ), options );
 					this.loading = this.proxy.loading;
 				}
-			},
-			find          : function( fn, ctx ) {
-				ctx || ( ctx = this );
-				return this.data.ovalues.find( function( node, i ) {
-					return fn.call( ctx, node, i, this );
-				}, this );
 			},
 			filter        : function( fn, ctx ) {
 				ctx || ( ctx = this );
@@ -1652,6 +1929,19 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			filterBy      : function( f, v ) {
 				this.filter( ( filters[util.ntype( v )] || filters.default ).bind( this, f, v ) );
 			},
+			find          : function( fn, ctx ) {
+				ctx || ( ctx = this );
+				return this.data.ovalues.find( function( node, i ) {
+					return fn.call( ctx, node, i, this );
+				}, this );
+			},
+			findAll       : function( fn, ctx ) {
+				ctx || ( ctx = this );
+				return this.data.ovalues.filter( function( node, i ) {
+					return fn.call( ctx, node, i, this );
+				}, this );
+			},
+			first         : function() { return this.getAt( 0 ); },
 			get           : function( node ) {
 				if ( is_obj( node ) )
 					return node instanceof DataNode && this.data.key( node )
@@ -1663,13 +1953,17 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			getAt         : function( i ) {
 				return this.data.ovalues[i > - 1 ? i : this.data.length + i] || null;
 			},
+			getBoundEls   : function( cmp ) {
+				return this.data.values.invoke( 'getBoundEl', cmp );
+			},
 			indexOf       : function( node, use_view ) {
 				node = this.get( node ); // todo: shouls this use use_view too?
 				return node ? ( use_view === true ? this.view : this.data ).ovalues.indexOf( node ) : -1;
 			},
 			last          : function() { return this.getAt( -1 ); },
-			load          : function( data ) {
-				!data.success || this.add( data.items );
+			load          : function( data, options ) {
+				!data.success || this.add( data.items, !!options );
+				!options      || this.onChangeData( false, options );
 			},
 			map           : function( fn, ctx ) {
 				return this.view.ovalues.map( fn, ctx || this );
@@ -1812,11 +2106,11 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 
 				return node;
 			},
-			onChangeData   : function( silent ) {
+			onChangeData   : function( silent, options ) {
 				if ( this.suspendChange ) return;
 
-				this.emptyStash( silent );
-				silent === true || this.broadcast( 'change:data' );
+				this.emptyStash( true );
+				silent === true || this.broadcast( 'change:data', options );
 
 				if ( this.proxy )
 					this.loading = this.proxy.loading;
@@ -1824,8 +2118,8 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			onChangeView   : function( silent ) {
 				this.suspendChange || silent === true || this.broadcast( 'change:view' );
 			},
-			onLoad         : function( proxy, data, status, xhr ) {
-				this.broadcast( 'load:complete', data, status, xhr ).load( this.schema.coerce( data ) );
+			onLoad         : function( proxy, data, status, xhr, config ) {
+				this.broadcast( 'load:complete', data, status, xhr, config ).load( this.schema.coerce( data ), config.options );
 			},
 			onLoadError    : function( proxy, err, status ) {
 				this.broadcast( 'load:error', err, status );
@@ -2387,18 +2681,20 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		afterRender     : function() {
 			 this.broadcast( 'after:render' );
 
-			 addDOMListener( this.$elFocus, 'blur',  this.id + '::blur' );
-			 addDOMListener( this.$elFocus, 'focus', this.id + '::focus' );
-
 			!is_bool( this.active ) || this[( this.active === true ? '' : 'de' ) + 'activate']();
 
-			 if ( this.focused === true  ) {
-			 	this.focused = false;
-			 	this.focus();
-			 }
+			if ( this.focusable !== false ) {
+				addDOMListener( this.$elFocus, 'blur',  this.id + '::blur' );
+				addDOMListener( this.$elFocus, 'focus', this.id + '::focus' );
+
+				if ( this.focused === true  ) {
+					this.focused = false;
+					this.focus();
+				}
+			}
 		},
 		onAppend        : function( frag ) {
-			this[this.updateTarget].appendChild( frag );
+			this[this.updateTarget][0].appendChild( frag );
 		},
 		onDestroy       : function() {
 			if ( this.rendered ) {
@@ -2587,23 +2883,27 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		enable           : function() {
 			this.disabled = false;
 		},
-		layout           : function() {
+		layout           : function( force ) {
+			force = force === true;
+
 			if ( this.cmp && this.cmp.rendered && !this.el ) this.init();
 
-			if ( this.disabled || this.busy || this.refresh().beforeLayout() === false ) return;
+			if ( this.disabled || this.busy || this.refresh( force ).beforeLayout( force ) === false ) return;
 
-			this.onLayout()
-				.afterLayout();
+			this.onLayout( force )
+				.afterLayout( force );
+
+			return;
 		},
 // stub method over-writes
-		afterLayout      : function() {
+		afterLayout      : function( force ) {
 			this.busy = false;
 		},
-		beforeLayout     : function() {
+		beforeLayout     : function( force ) {
 			this.busy = true;
 		},
-		onLayout         : function() { },
-		refresh          : function() { },
+		onLayout         : function( force ) { },
+		refresh          : function( force ) { },
 		sync             : function() { },
 // internal methods
 		init             : function() {
@@ -2656,6 +2956,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		clsAnim         : 'w-anim',
 		clsBase         : 'w-cmp',
 		clsDefault      : 'w-cmp',
+		focusable       :  true,
 		html            :  null,
 		layout          :  null,
 		slcFocus        :  null,
@@ -2707,7 +3008,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			data === UNDEF || this.disabled || this.broadcast( 'before:append', data, tpl ) === false || this.onAppend( data, tpl || this.tplContent );
 		},
 		blur            : function( evt ) {
-			!this.interactive || !this.focused || this.broadcast( 'before:blur', evt ) === false || this.onBlur().broadcast( 'blur', evt );
+			!this.interactive || this.focusable === false || !this.focused || this.broadcast( 'before:blur', evt ) === false || this.onBlur().broadcast( 'blur', evt );
 		},
 		collapse        : function() {
 			 this.collapsed || !this.interactive || this.broadcast( 'before:collapse' ) === false || this.onCollapse().broadcast( 'collapse' );
@@ -2728,7 +3029,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			!this.collapsed || !this.interactive || this.broadcast( 'before:expand' ) === false || this.onExpand().broadcast( 'expand' );
 		},
 		focus           : function( evt ) {
-			!this.interactive || this.focused || this.broadcast( 'before:focus', evt ) === false || this.onFocus().broadcast( 'focus', evt );
+			!this.interactive || this.focusable === false || this.focused || this.broadcast( 'before:focus', evt ) === false || this.onFocus().broadcast( 'focus', evt );
 		},
 		hide            : function() {
 			if ( !this.rendered ) this.render();
@@ -2743,11 +3044,23 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 
 			this.broadcast( 'load:start', config );
 		},
-		refreshView     : function() {
-			this.update( this.store.toJSON() );
+		loadAppend      : function( config ) {
+			this.suspendApply || ++this.suspendApply;
+
+			if ( this.disabled || this.broadcast( 'before:load', config ) === false ) return;
+
+			this.store.fetch( config, { append : true } );
+
+			this.broadcast( 'load:start', config );
+		},
+		refreshView     : function( store, options ) {
+			this[is_obj( options ) && options.append === true ? 'append' : 'update']( this.store.toJSON() );
+			this.store.findAll( function( node ) {
+				return !this.has( node.id );
+			}, this.store.view ).invoke( 'getBoundEl', this ).invoke( 'remove' );
 		},
 		replaceCached   : function() {
-			!this.bound || ( this[this.updateTarget] ).find( '.replace-cached' ).map( this._replaceCached, this );
+			!this.bound || this[this.updateTarget].find( '.replace-cached' ).map( this._replaceCached, this );
 		},
 		show            : function() {
 			if ( !this.rendered ) this.render();
@@ -2768,9 +3081,10 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 // stub methods
 		afterActivate   : function() { this.broadcast( 'after:activate' ); },
 		afterAppend     : function() {
+			this[this.updateTarget].find( '.replace-cached' ).remove();
 			!this.store  || this.replaceCached().updateBindings();
 //			!this.layout || this.layout.layout();
-			this.broadcast( 'append' );
+			this.broadcast( 'append' ).broadcast( 'change:dom' );
 		},
 		afterCollapse   : function() { this.broadcast( 'after:collapse' ); },
 		afterDeactivate : function() { this.broadcast( 'after:deactivate' ); },
@@ -2780,7 +3094,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		afterUpdate     : function() {
 			!this.store  || this.replaceCached().updateBindings();
 //			!this.layout || this.layout.layout();
-			 this.broadcast( 'update' );
+			 this.broadcast( 'update' ).broadcast( 'change:dom' );
 		},
 		afterTransition : function() {
 			!is_fun( this[this.afterEvent] ) || this[this.afterEvent]();
@@ -2867,6 +3181,12 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				.mixin( 'domrefs' );
 
 			this.once( 'before:render', 'initLayout', this );
+
+			!this.store || this.store.observe( {
+				'change:data' : 'refreshView',
+				'change:view' : 'refreshView',
+				 ctx          :  this
+			} );
 		},
 // internal methods,
 		_replaceCached  : function( replacer ) {
@@ -2942,23 +3262,10 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				case 'nullobject'            :
 					this.store = widgie.create( 'data.Store', s );
 			}
-			!this.store || this.store.observe( {
-				'change:data' : 'refreshView',
-				'change:view' : 'refreshView',
-				 ctx          :  this
-			} );
 		},
 		onAction        : function( action, evt ) {
 			if ( is_fun( this[action] ) )
 				this[action]( evt );
-		},
-		onLoad          : function( store ) {
-			!this.suspendApply || --this.suspendApply;
-
-			if ( this.rendered )
-				this.update();
-			else
-				this.once( 'after:render', this.update, this );
 		}
 	} );
 
@@ -3018,6 +3325,10 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 
 			this.onClear().resumeEvents().broadcast( 'clear' );
 		},
+		contains      : function( item ) {
+			item = this.get( item );
+			return item && item.parentBox === this;
+		},
 		get           : function( item ) {
 //if ( typeof item == 'string' && item.indexOf( 'box' ) > -1 ) debugger;
 			if ( this.items.length )  // noinspection FallthroughInSwitchStatementJS
@@ -3075,7 +3386,8 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			return null;
 		},
 		onClear       : function() {
-			this.items.map( this.remove, this ).map( this.destroyItem, this );
+			while ( this.items.length )
+				this.remove( this.items[0], true );
 		},
 		onRemove      : function( item ) {
 			util.remove( this.items, item );
@@ -3346,6 +3658,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			errorMsg       : null,
 			format         : null,
 			inputType      : null,
+			multiLine      : false,
 			name           : null,
 			toolTip        : null,
 			tpl            : Name_lc + '.field',
@@ -3376,7 +3689,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 						v = this.rawToVal( raw ),
 						r = this.valToRaw( v );
 
-					if ( util.empty( raw ) ) {
+					if ( util.empty( raw ) && !util.empty( c.value ) ) {
 						c.val_prev = c.value;
 						c.value    = UNDEF;
 
@@ -3385,14 +3698,19 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 					else if ( v !== c.value ) {
 						if ( this.isValid( v ) ) {
 							c.val_prev = c.value;
+							c.value    = v;
 
-							this.$elField.val( this.valToRaw( c.value = v ) );
+							if ( this.ready ) {
+								this.$elField.val( this.valToRaw( v ) );
+								this.broadcast( 'change', v, c.val_prev );
+							}
 
-							this.broadcast( 'change', v, c.val_prev );
 						}
 						else {
-							this.$elField.val( this.valToRaw( c.value ) );
-							this.broadcast( 'change', c.value, c.val_prev );
+							if ( this.ready ) {
+								this.$elField.val( this.valToRaw( c.value ) );
+								this.broadcast( 'change', c.value, c.val_prev );
+							}
 						}
 					}
 
@@ -3423,6 +3741,11 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 // stub overwrite methods
 			afterRender    : function() {
 				this.parent( arguments );
+				this.$elField.val( this.value );
+				switch ( this.inputType ) {
+					case 'checkbox' : case 'radio' :
+						this.$elField.attr( 'data-click', this.id + '::onFocus' );
+				}
 			},
 			onBlur         : function() {
 				this.parent( arguments ).watchStop().validate();

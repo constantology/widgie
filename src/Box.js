@@ -43,6 +43,10 @@
 
 			this.onClear().resumeEvents().broadcast( 'clear' );
 		},
+		contains      : function( item ) {
+			item = this.get( item );
+			return item && item.parentBox === this;
+		},
 		get           : function( item ) {
 //if ( typeof item == 'string' && item.indexOf( 'box' ) > -1 ) debugger;
 			if ( this.items.length )  // noinspection FallthroughInSwitchStatementJS
@@ -100,7 +104,8 @@
 			return null;
 		},
 		onClear       : function() {
-			this.items.map( this.remove, this ).map( this.destroyItem, this );
+			while ( this.items.length )
+				this.remove( this.items[0], true );
 		},
 		onRemove      : function( item ) {
 			util.remove( this.items, item );

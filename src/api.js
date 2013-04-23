@@ -32,33 +32,35 @@
 			},
 			re_json = /\/(json|javascript)$/i;
 
-		return function xhr( options ) {
+		return function xhr( config ) {
 			var data, hd, method, req = new XMLHttpRequest();
 
-			req._options    = options;
-			data            = options.data;
-			options.headers = hd = util.copy( options.headers || util.obj(), headers, true );
-			method          = options.method;
-			method          = method ? method.toUpperCase() : 'GET';
+			req._config    = config;
+			data           = config.data;
+			config.headers = hd = util.copy( config.headers || util.obj(), headers, true );
+			method         = config.method;
+			method         = method ? method.toUpperCase() : 'GET';
 
 			req.addEventListener( 'error', req._onerror = onerror.bind( req ), true );
 			req.addEventListener( 'load',  req._onload  = onload.bind( req ), true );
 
-			req.open( method, options.url, true );
+			req.open( method, config.url, true );
 
-			if ( POSTISH.test( method ) && hd['Content-Type'] === headers['Content-Type'] && options.sendJSON !== true )
+			if ( POSTISH.test( method ) && hd['Content-Type'] === headers['Content-Type'] && config.sendJSON !== true )
 				hd['Content-Type'] = 'application/x-www-form-urlencoded;charset=UTF-8';
 
 			!req.overrideMimeType || req.overrideMimeType( hd['Content-Type'] );
 
-			Object.reduce( options.headers, setHeader, req );
+			Object.reduce( config.headers, setHeader, req );
 
-//			req.responseType = 'json';   // noinspection FallthroughInSwitchStatementJS
+//			req.responseType = 'json';
+
+			// noinspection FallthroughInSwitchStatementJS
 			switch ( util.ntype( data ) ) {
 				case 'string'   :
 				case 'formdata' :                                                  break;
 				case 'array'    :
-				case 'object'   : data = options.sendJSON === true
+				case 'object'   : data = config.sendJSON === true
 									   ? JSON.stringify( data )
 									   : __lib__.qs.encode( data ).substring( 1 ); break;
 				default         : data = null;
@@ -73,7 +75,7 @@
 			req.removeEventListener( 'error', req._onerror, true );
 			req.removeEventListener( 'load',  req._onload, true );
 
-			delete req._onerror; delete req._onload; delete req._options;
+			delete req._onerror; delete req._onload; delete req._config;
 
 			return req;
 		}
@@ -98,23 +100,23 @@
 		}
 
 		function onabort( evt ) {
-			var options = this._options;
+			var config = this._config;
 
-			!is_fun( options.abort ) || options.abort( cleanup( this ), options );
+			!is_fun( config.abort ) || config.abort( cleanup( this ), config );
 		}
 
 		function onerror( evt ) {
-			var req     = this,
-				options = req._options;
+			var req    = this,
+				config = req._config;
 
-			!is_fun( options.error ) || options.error( data( req ), req.status, cleanup( req ), options );
+			!is_fun( config.error ) || config.error( data( req ), req.status, cleanup( req ), config );
 		}
 
 		function onload( evt ) {
-			var req     = this,
-				options = req._options;
+			var req    = this,
+				config = req._config;
 
-			!is_fun( options.success ) || options.success( data( req ), req.status, cleanup( req ), options );
+			!is_fun( config.success ) || config.success( data( req ), req.status, cleanup( req ), config );
 		}
 
 		function setHeader( req, val, key ) {

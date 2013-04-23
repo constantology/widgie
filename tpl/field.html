@@ -1,11 +1,15 @@
 {% sub label %}
-<label class="{{ clsBase }}-label" data-ref="label" for="{{ id }}">{{ label }}</label>
+<label class="{{ clsBase }}-label" data-ref="label" for="{{ id }}-input">{{ label }}</label>
 {% endsub %}
 {% sub placeholder %}
 placeholder="{% if placeholder === ':label' %}{{ label }}{% else %}{{ placeholder }}{% endif %}"
 {% endsub %}
-<{{ @.tagName }} class="{{ @.clsBase }} {{ @.clsDefault if @.clsDefault|exists }} {{ @.cls if @.cls|exists }}"{% if @.errorMsg %} data-error-msg="{{ @.errorMsg }}"{% endif %} tabindex="-1"><div class="{{ @.clsBase }}-ct" data-ref="ct"{% if @.toolTip %} data-tool-tip="{{ @.toolTip }}"{% endif %}>
+<{{ @.tagName }} class="{{ @.clsBase }} {{ @.clsDefault if @.clsDefault|exists }} {{ @.cls if @.cls|exists }} {{ @.clsBase }}-{{ @.inputType }}"{% if @.errorMsg %} data-error-msg="{{ @.errorMsg }}"{% endif %} tabindex="-1"><div class="{{ @.clsBase }}-ct" data-ref="ct"{% if @.toolTip %} data-tool-tip="{{ @.toolTip }}"{% endif %}>
 	{% if @.showLabel AND @.labelPosition !== 'after' %}{{ @|parse:"label" }}{% endif %}
-	<span class="{{ @.clsBase }}-input-ct"><input class="{{ @.clsBase }}-input" data-ref="field" id="{{ @.id }}" name="{{ @.name }}" {{ @|parse:"placeholder" if @.placeholder|type:"string" }} type="{{ @._inputType }}" value="{{ @.value if @.value|exists }}" /></span>
+	<span class="{{ @.clsBase }}-input-ct {{ @.clsBase }}-input-{{ @.inputType }}-ct">{% if @.inputType === 'text' AND @.multiLine === true %}
+		<textarea class="{{ @.clsBase }}-input {{ @.clsBase }}-input-multiline {{ @.clsBase }}-input-{{ @.inputType }}" data-ref="field" id="{{ @.id }}-input" name="{{ @.name }}" {{ @|parse:"placeholder" if @.placeholder|type:"string" }}></textarea>
+	{% else %}
+		<input class="{{ @.clsBase }}-input {{ @.clsBase }}-input-{{ @.inputType }}" data-ref="field" id="{{ @.id }}-input" name="{{ @.name }}" {{ @|parse:"placeholder" if @.placeholder|type:"string" }} type="{{ @._inputType }}" value="{{ @.value if @.value|exists }}" />
+	{% endif %}</span>
 	{% if @.showLabel AND @.labelPosition === 'after' %}{{ @|parse:"label" }}{% endif %}
 </div></{{ @.tagName }}>

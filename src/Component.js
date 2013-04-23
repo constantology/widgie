@@ -22,6 +22,7 @@
 		clsAnim         : 'w-anim',
 		clsBase         : 'w-cmp',
 		clsDefault      : 'w-cmp',
+		focusable       :  true,
 		html            :  null,
 		layout          :  null,
 		slcFocus        :  null,
@@ -73,7 +74,7 @@
 			data === UNDEF || this.disabled || this.broadcast( 'before:append', data, tpl ) === false || this.onAppend( data, tpl || this.tplContent );
 		},
 		blur            : function( evt ) {
-			!this.interactive || !this.focused || this.broadcast( 'before:blur', evt ) === false || this.onBlur().broadcast( 'blur', evt );
+			!this.interactive || this.focusable === false || !this.focused || this.broadcast( 'before:blur', evt ) === false || this.onBlur().broadcast( 'blur', evt );
 		},
 		collapse        : function() {
 			 this.collapsed || !this.interactive || this.broadcast( 'before:collapse' ) === false || this.onCollapse().broadcast( 'collapse' );
@@ -94,7 +95,7 @@
 			!this.collapsed || !this.interactive || this.broadcast( 'before:expand' ) === false || this.onExpand().broadcast( 'expand' );
 		},
 		focus           : function( evt ) {
-			!this.interactive || this.focused || this.broadcast( 'before:focus', evt ) === false || this.onFocus().broadcast( 'focus', evt );
+			!this.interactive || this.focusable === false || this.focused || this.broadcast( 'before:focus', evt ) === false || this.onFocus().broadcast( 'focus', evt );
 		},
 		hide            : function() {
 			if ( !this.rendered ) this.render();
@@ -109,11 +110,23 @@
 
 			this.broadcast( 'load:start', config );
 		},
-		refreshView     : function() {
-			this.update( this.store.toJSON() );
+		loadAppend      : function( config ) {
+			this.suspendApply || ++this.suspendApply;
+
+			if ( this.disabled || this.broadcast( 'before:load', config ) === false ) return;
+
+			this.store.fetch( config, { append : true } );
+
+			this.broadcast( 'load:start', config );
+		},
+		refreshView     : function( store, options ) {
+			this[is_obj( options ) && options.append === true ? 'append' : 'update']( this.store.toJSON() );
+			this.store.findAll( function( node ) {
+				return !this.has( node.id );
+			}, this.store.view ).invoke( 'getBoundEl', this ).invoke( 'remove' );
 		},
 		replaceCached   : function() {
-			!this.bound || ( this[this.updateTarget] ).find( '.replace-cached' ).map( this._replaceCached, this );
+			!this.bound || this[this.updateTarget].find( '.replace-cached' ).map( this._replaceCached, this );
 		},
 		show            : function() {
 			if ( !this.rendered ) this.render();
@@ -134,9 +147,10 @@
 // stub methods
 		afterActivate   : function() { this.broadcast( 'after:activate' ); },
 		afterAppend     : function() {
+			this[this.updateTarget].find( '.replace-cached' ).remove();
 			!this.store  || this.replaceCached().updateBindings();
 //			!this.layout || this.layout.layout();
-			this.broadcast( 'append' );
+			this.broadcast( 'append' ).broadcast( 'change:dom' );
 		},
 		afterCollapse   : function() { this.broadcast( 'after:collapse' ); },
 		afterDeactivate : function() { this.broadcast( 'after:deactivate' ); },
@@ -146,7 +160,7 @@
 		afterUpdate     : function() {
 			!this.store  || this.replaceCached().updateBindings();
 //			!this.layout || this.layout.layout();
-			 this.broadcast( 'update' );
+			 this.broadcast( 'update' ).broadcast( 'change:dom' );
 		},
 		afterTransition : function() {
 			!is_fun( this[this.afterEvent] ) || this[this.afterEvent]();
@@ -233,6 +247,12 @@
 				.mixin( 'domrefs' );
 
 			this.once( 'before:render', 'initLayout', this );
+
+			!this.store || this.store.observe( {
+				'change:data' : 'refreshView',
+				'change:view' : 'refreshView',
+				 ctx          :  this
+			} );
 		},
 // internal methods,
 		_replaceCached  : function( replacer ) {
@@ -308,23 +328,10 @@
 				case 'nullobject'            :
 					this.store = widgie.create( 'data.Store', s );
 			}
-			!this.store || this.store.observe( {
-				'change:data' : 'refreshView',
-				'change:view' : 'refreshView',
-				 ctx          :  this
-			} );
 		},
 		onAction        : function( action, evt ) {
 			if ( is_fun( this[action] ) )
 				this[action]( evt );
-		},
-		onLoad          : function( store ) {
-			!this.suspendApply || --this.suspendApply;
-
-			if ( this.rendered )
-				this.update();
-			else
-				this.once( 'after:render', this.update, this );
 		}
 	} );
 

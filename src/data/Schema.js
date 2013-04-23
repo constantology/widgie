@@ -96,6 +96,7 @@
 					name     : error.code.DATA_SCHEMA_TYPE
 				} );
 
+				// noinspection FallthroughInSwitchStatementJS
 				switch ( util.ntype( this.format ) ) {
 					case 'function' :
 					case 'string'   : break;
@@ -113,6 +114,7 @@
 			default     : null,
 			format      : null,
 			id          : null,
+			model       : null,
 			type        : 'object',
 
 	// internal properties

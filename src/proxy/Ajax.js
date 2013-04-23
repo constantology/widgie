@@ -1,23 +1,22 @@
 	define( namespace( 'proxy.Ajax' ), function () {
-		function onAbort( xhr, status, err ) {
+		function onAbort( xhr, config ) {
 			 this.loading = false;
-			!this.interactive || status == 'abort'   || this.onReqAbort( xhr, status, err ).broadcast( 'error', err, status, xhr );
+			!this.interactive || status == 'abort'   || this.onReqAbort( xhr, config ).broadcast( 'abort', err, config );
 		}
 
-		function onError ( xhr, status, err ) {
+		function onError( xhr, status, err, config ) {
 			 this.loading = false;
-			!this.interactive || this.onReqError( xhr, status, err ).broadcast( 'error', err, status, xhr );
+			!this.interactive || this.onReqError( xhr, status, err ).broadcast( 'error', err, status, xhr, config );
 		}
 
-		function onLoad ( data, status, xhr ) {
+		function onLoad ( data, status, xhr, config ) {
 			 this.loading = false;
-			!this.interactive || typeof data !== 'object' || this.onReqLoad( data, status, xhr ).broadcast( 'load', data, status, xhr );
+			!this.interactive || typeof data !== 'object' || this.onReqLoad( data, status, xhr ).broadcast( 'load', data, status, xhr, config );
 		}
 
 		function onTimeout() {
 			this.loading = false;
-			this.current.abort();
-			this.onReqTimeout( this.current ).broadcast( 'timeout', this.current );
+			this.abort().onReqTimeout( this.current ).broadcast( 'timeout', this.current );
 		}
 
 		return {
@@ -50,12 +49,12 @@
 // public properties
 			loading        : false,
 // internal properties
+			lastConfig     : null,
 			tid            : null,
 
 // public methods
-			abort          : function( silent ) {
+			abort          : function() {
 				!this.current   || this.current.abort();
-				silent === true || this.broadcast( 'abort', this.current );
 			},
 			disable        : function() {
 				if ( !this.disabled && this.broadcast( 'before:disable' ) !== false ) {
@@ -69,7 +68,11 @@
 					this.onEnable().broadcast( 'enable' );
 				}
 			},
-			load           : function ( data, method ) {
+			load           : function ( data, method, options ) {
+				if ( is_obj( method ) ) {
+					options = method;
+					method  = UNDEF;
+				}
 				if ( !method || typeof method != 'string' )
 					method = this.method || 'GET';
 
@@ -78,37 +81,39 @@
 				/*if ( !navigator.onLine )
 					this.broadcast( 'error:	offline' );
 
-				else*/ if ( this.interactive && this.broadcast( 'before:load', data, method ) !== false )
-					this.onLoadStart( this.createUrl( data = this.prepareData( data ) ), method, data );
+				else*/ if ( this.interactive && this.broadcast( 'before:load', data, method, options ) !== false )
+					this.onLoadStart( this.createUrl( data = this.prepareData( data ) ), method, data, options );
 			},
 			reload         : function() {
-				if ( this.lastOptions && this.interactive && this.broadcast( 'before:reload' ) !== false )
-					this.doRequest( this.lastOptions );
+				if ( this.lastConfig && this.interactive && this.broadcast( 'before:reload' ) !== false )
+					this.doRequest( this.lastConfig );
 			},
 // stub overwrite methods
-			onReqAbort     : function() {},
-			onReqError     : function() {},
-			onReqLoad      : function() {},
-			onReqTimeout   : function() {},
+			onReqAbort     : function( xhr, config ) {},
+			onReqError     : function( xhr, status, err, config ) {},
+			onReqLoad      : function( data, status, xhr, config ) {},
+			onReqTimeout   : function( config ) {},
 // internal methods
 			createUrl      : function ( params ) {
 				return this.urlBase;
 			},
 			doRequest      : function( transport ) {
-				this.lastOptions = transport;
-				this.loading     = true;
-				this.current     = api.xhr( transport );
-				this.tid         = setTimeout( this.onTimeout, this.timeout );
+				this.lastConfig = transport;
+				this.loading    = true;
+				this.current    = api.xhr( transport );
+				this.tid        = setTimeout( this.onTimeout, this.timeout );
 
 				this.broadcast( 'loadstart' );
 
 				return this.current;
 			},
-			initTransport  : function( url, method, data ) {
+			initTransport  : function( url, method, data, options ) {
 				var transport = {
+					abort   : this.onAbort,
 					error   : this.onError,
 					headers : this.headers,
 					method  : method || this.method,
+					options : options,
 					success : this.onLoad,
 					url     : url
 				};
@@ -127,17 +132,19 @@
 				clearTimeout( this.tid );
 				delete this.tid;
 			},
+
 // stub methods
 			onBeforeLoad    : function () {
 				!this.current || this.abort( true );
 			},
 			onDisable       : function() { },
 			onEnable        : function() { },
-			onLoadStart     : function( url, method, data ) {
+			onLoadStart     : function( url, method, data, options ) {
 				return this.doRequest( this.initTransport.apply( this, arguments ) );
 			},
 // constructor methods
 			init            : function () {
+				this.onAbort   = onAbort.bind( this );
 				this.onError   = onError.bind( this );
 				this.onLoad    = onLoad.bind( this );
 				this.onTimeout = onTimeout.bind( this );

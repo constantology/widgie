@@ -26,23 +26,27 @@
 		enable           : function() {
 			this.disabled = false;
 		},
-		layout           : function() {
+		layout           : function( force ) {
+			force = force === true;
+
 			if ( this.cmp && this.cmp.rendered && !this.el ) this.init();
 
-			if ( this.disabled || this.busy || this.refresh().beforeLayout() === false ) return;
+			if ( this.disabled || this.busy || this.refresh( force ).beforeLayout( force ) === false ) return;
 
-			this.onLayout()
-				.afterLayout();
+			this.onLayout( force )
+				.afterLayout( force );
+
+			return;
 		},
 // stub method over-writes
-		afterLayout      : function() {
+		afterLayout      : function( force ) {
 			this.busy = false;
 		},
-		beforeLayout     : function() {
+		beforeLayout     : function( force ) {
 			this.busy = true;
 		},
-		onLayout         : function() { },
-		refresh          : function() { },
+		onLayout         : function( force ) { },
+		refresh          : function( force ) { },
 		sync             : function() { },
 // internal methods
 		init             : function() {

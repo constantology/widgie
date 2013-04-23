@@ -1,5 +1,5 @@
 	util.def( __lib__, 'Validate', { value : {
-		date   : {
+		date     : {
 			minmax : function( field, value ) {
 				return value <= field.max && value >= field.min;
 			},
@@ -13,7 +13,7 @@
 				return util.ntype( value ) == 'date' && value <= field.max && value >= field.min;
 			}
 		},
-		number : {
+		number   : {
 			minmax : function( field, value ) {
 				return value <= field.max && value >= field.min;
 			},
@@ -25,7 +25,21 @@
 				return util.type( value ) == 'number' && ( field.allowDecimals || Math.floor( value ) === value );
 			}
 		},
-		text   : {
+		checkbox : {
+			minmax : function( field, value ) {
+				return true;
+			},
+			raw    : function( field, value ) {
+				return value;
+			},
+			val    : function( field, value ) {
+				return value;
+			},
+			valid  : function( field, value ) {
+				return !field.elField || field.elField.checked === true;
+			}
+		},
+		text     : {
 			minmax : function( field, value ) {
 				return value.length <= field.max && value.length >= field.min;
 			},
@@ -40,4 +54,5 @@
 			}
 		}
 	} }, 'cw' );
+	__lib__.Validate.radio    = __lib__.Validate.checkbox;
 	__lib__.Validate.password = __lib__.Validate.text;

@@ -1,3 +1,3 @@
-<{{ @.tagName }} class="{{ @.clsBase }} {{ @.clsDefault if @.clsDefault|exists }} {{ @.cls if @.cls|exists }}" tabindex="-1">
+<{{ @.tagName }} class="{{ @.clsBase }} {{ @.clsDefault if @.clsDefault|exists }} {{ @.cls if @.cls|exists }}"{% if this.focusable !== false %} tabindex="-1"{% endif %}>
 	<div class="{{ @.clsBase }}-ct" data-ref="ct"></div>
 </{{ @.tagName }}>

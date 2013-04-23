@@ -25,40 +25,35 @@
 			api            : null,
 
 // public methods
-			create         : function( data ) {
-				this.onAPICall( 'create', data );
+			create         : function( data, options ) {
+				this.onAPICall( 'create', data, options );
 			},
-			delete         : function( data ) {
-				this.onAPICall( 'read', data );
+			delete         : function( data, options ) {
+				this.onAPICall( 'delete', data, options );
 			},
-			read           : function( data ) {
-				this.onAPICall( 'read', data );
+			read           : function( data, options ) {
+				this.onAPICall( 'read', data, options );
 			},
-			update         : function( data ) {
-				this.onAPICall( 'update', data );
-//				if ( this.interactive && this.broadcast( 'before:update', data ) !== false )
-//					this.onLoadStart( this.api.update.url, this.api.update.method, data = this.prepareData( data ), 'update' );
+			update         : function( data, options ) {
+				this.onAPICall( 'update', data, options );
 			},
 // stub overwrite methods
-			onAPICall      : function( command, data ) {
+			onAPICall      : function( command, data, options ) {
 				var api = this.api[command];
-				if ( api && this.interactive && this.broadcast( 'before:' + command, data ) !== false )
-					this.onLoadStart( api.url, api.method, data = this.prepareData( data, api ), command );
+				if ( api && this.interactive && this.broadcast( 'before:' + command, data, options ) !== false )
+					this.onLoadStart( api.url, api.method, data = this.prepareData( data, api ), options, command );
 			},
-			onReqAbort     : function( xhr, status, err ) {
-				var trans = this.lastOptions;
-				this.broadcast( 'abort:' + trans.type, xhr, status, err );
+			onReqAbort     : function( xhr, options ) {
+				this.broadcast( 'abort:' + options.type, xhr, status, err );
 			},
-			onReqError     : function( xhr, status, err ) {
-				var trans = this.lastOptions;
-				this.broadcast( 'error:' + trans.type, xhr, status, err );
+			onReqError     : function( xhr, status, err, options ) {
+				this.broadcast( 'error:' + options.type, xhr, status, err );
 			},
-			onReqLoad      : function( data, status, xhr ) {
-				var trans = this.lastOptions;
-				this.broadcast( trans.type, data, status, xhr );
+			onReqLoad      : function( data, status, xhr, options ) {
+				this.broadcast( options.type, data, status, xhr );
 			},
-			onLoadStart     : function( url, method, data, type ) {
-				return this.parent( url, method, data, type || 'read' );
+			onLoadStart     : function( url, method, data, options, command ) {
+				return this.parent( url, method, data, options, command || 'read' );
 			},
 // internal methods
 			initTransport  : function( url, method, data, type ) {

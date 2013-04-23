@@ -62,18 +62,20 @@
 		afterRender     : function() {
 			 this.broadcast( 'after:render' );
 
-			 addDOMListener( this.$elFocus, 'blur',  this.id + '::blur' );
-			 addDOMListener( this.$elFocus, 'focus', this.id + '::focus' );
-
 			!is_bool( this.active ) || this[( this.active === true ? '' : 'de' ) + 'activate']();
 
-			 if ( this.focused === true  ) {
-			 	this.focused = false;
-			 	this.focus();
-			 }
+			if ( this.focusable !== false ) {
+				addDOMListener( this.$elFocus, 'blur',  this.id + '::blur' );
+				addDOMListener( this.$elFocus, 'focus', this.id + '::focus' );
+
+				if ( this.focused === true  ) {
+					this.focused = false;
+					this.focus();
+				}
+			}
 		},
 		onAppend        : function( frag ) {
-			this[this.updateTarget].appendChild( frag );
+			this[this.updateTarget][0].appendChild( frag );
 		},
 		onDestroy       : function() {
 			if ( this.rendered ) {

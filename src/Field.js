@@ -13,6 +13,7 @@
 			errorMsg       : null,
 			format         : null,
 			inputType      : null,
+			multiLine      : false,
 			name           : null,
 			toolTip        : null,
 			tpl            : Name_lc + '.field',
@@ -43,7 +44,7 @@
 						v = this.rawToVal( raw ),
 						r = this.valToRaw( v );
 
-					if ( util.empty( raw ) ) {
+					if ( util.empty( raw ) && !util.empty( c.value ) ) {
 						c.val_prev = c.value;
 						c.value    = UNDEF;
 
@@ -52,14 +53,19 @@
 					else if ( v !== c.value ) {
 						if ( this.isValid( v ) ) {
 							c.val_prev = c.value;
+							c.value    = v;
 
-							this.$elField.val( this.valToRaw( c.value = v ) );
+							if ( this.ready ) {
+								this.$elField.val( this.valToRaw( v ) );
+								this.broadcast( 'change', v, c.val_prev );
+							}
 
-							this.broadcast( 'change', v, c.val_prev );
 						}
 						else {
-							this.$elField.val( this.valToRaw( c.value ) );
-							this.broadcast( 'change', c.value, c.val_prev );
+							if ( this.ready ) {
+								this.$elField.val( this.valToRaw( c.value ) );
+								this.broadcast( 'change', c.value, c.val_prev );
+							}
 						}
 					}
 
@@ -90,6 +96,11 @@
 // stub overwrite methods
 			afterRender    : function() {
 				this.parent( arguments );
+				this.$elField.val( this.value );
+				switch ( this.inputType ) {
+					case 'checkbox' : case 'radio' :
+						this.$elField.attr( 'data-click', this.id + '::onFocus' );
+				}
 			},
 			onBlur         : function() {
 				this.parent( arguments ).watchStop().validate();

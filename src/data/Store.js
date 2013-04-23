@@ -71,10 +71,10 @@
 // public methods
 			add           : function( data, silent ) {
 				if ( is_arr( data ) ) {
-					++this.suspendChange;
-					data.forEach( this.add, this );
-					--this.suspendChange;
-					return this.onChangeData( silent );
+					 this.suspendChange || ++this.suspendChange;
+					 data.forEach( this.add, this );
+					!this.suspendChange || --this.suspendChange;
+					 return this.onChangeData( silent );
 				}
 
 				var node = this.onAdd( data );
@@ -113,18 +113,11 @@
 				silent === true || this.broadcast( 'empty:stash' );
 				this.onChangeView( silent );
 			},
-			first         : function() { return this.getAt( 0 ); },
-			fetch         : function( params ) {
+			fetch         : function( params, options ) {
 				if ( this.proxy ) {
-					this.proxy.load( this.prepare( params ) );
+					this.proxy.load( this.prepare( params ), options );
 					this.loading = this.proxy.loading;
 				}
-			},
-			find          : function( fn, ctx ) {
-				ctx || ( ctx = this );
-				return this.data.ovalues.find( function( node, i ) {
-					return fn.call( ctx, node, i, this );
-				}, this );
 			},
 			filter        : function( fn, ctx ) {
 				ctx || ( ctx = this );
@@ -135,6 +128,19 @@
 			filterBy      : function( f, v ) {
 				this.filter( ( filters[util.ntype( v )] || filters.default ).bind( this, f, v ) );
 			},
+			find          : function( fn, ctx ) {
+				ctx || ( ctx = this );
+				return this.data.ovalues.find( function( node, i ) {
+					return fn.call( ctx, node, i, this );
+				}, this );
+			},
+			findAll       : function( fn, ctx ) {
+				ctx || ( ctx = this );
+				return this.data.ovalues.filter( function( node, i ) {
+					return fn.call( ctx, node, i, this );
+				}, this );
+			},
+			first         : function() { return this.getAt( 0 ); },
 			get           : function( node ) {
 				if ( is_obj( node ) )
 					return node instanceof DataNode && this.data.key( node )
@@ -146,13 +152,17 @@
 			getAt         : function( i ) {
 				return this.data.ovalues[i > - 1 ? i : this.data.length + i] || null;
 			},
+			getBoundEls   : function( cmp ) {
+				return this.data.values.invoke( 'getBoundEl', cmp );
+			},
 			indexOf       : function( node, use_view ) {
 				node = this.get( node ); // todo: shouls this use use_view too?
 				return node ? ( use_view === true ? this.view : this.data ).ovalues.indexOf( node ) : -1;
 			},
 			last          : function() { return this.getAt( -1 ); },
-			load          : function( data ) {
-				!data.success || this.add( data.items );
+			load          : function( data, options ) {
+				!data.success || this.add( data.items, !!options );
+				!options      || this.onChangeData( false, options );
 			},
 			map           : function( fn, ctx ) {
 				return this.view.ovalues.map( fn, ctx || this );
@@ -295,11 +305,11 @@
 
 				return node;
 			},
-			onChangeData   : function( silent ) {
+			onChangeData   : function( silent, options ) {
 				if ( this.suspendChange ) return;
 
-				this.emptyStash( silent );
-				silent === true || this.broadcast( 'change:data' );
+				this.emptyStash( true );
+				silent === true || this.broadcast( 'change:data', options );
 
 				if ( this.proxy )
 					this.loading = this.proxy.loading;
@@ -307,8 +317,8 @@
 			onChangeView   : function( silent ) {
 				this.suspendChange || silent === true || this.broadcast( 'change:view' );
 			},
-			onLoad         : function( proxy, data, status, xhr ) {
-				this.broadcast( 'load:complete', data, status, xhr ).load( this.schema.coerce( data ) );
+			onLoad         : function( proxy, data, status, xhr, config ) {
+				this.broadcast( 'load:complete', data, status, xhr, config ).load( this.schema.coerce( data ), config.options );
 			},
 			onLoadError    : function( proxy, err, status ) {
 				this.broadcast( 'load:error', err, status );
