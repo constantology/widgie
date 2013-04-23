@@ -31,7 +31,12 @@
 
 			if ( this.cmp && this.cmp.rendered && !this.el ) this.init();
 
-			if ( this.disabled || this.busy || this.refresh( force ).beforeLayout( force ) === false ) return;
+			if ( this.disabled || this.busy ) return;
+
+			if ( this.refresh( force ).beforeLayout( force ) === false ) {
+				this.busy = false;
+				return;
+			}
 
 			this.onLayout( force )
 				.afterLayout( force );

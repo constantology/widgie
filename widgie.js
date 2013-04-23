@@ -2888,7 +2888,12 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 
 			if ( this.cmp && this.cmp.rendered && !this.el ) this.init();
 
-			if ( this.disabled || this.busy || this.refresh( force ).beforeLayout( force ) === false ) return;
+			if ( this.disabled || this.busy ) return;
+
+			if ( this.refresh( force ).beforeLayout( force ) === false ) {
+				this.busy = false;
+				return;
+			}
 
 			this.onLayout( force )
 				.afterLayout( force );
