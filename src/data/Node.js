@@ -9,7 +9,9 @@
 				this.raw     = raw;
 				this.schema  = schema;
 				this.src     = schema.coerceItem( raw );
-				this.set( 'id', ( this.src[schema.mappings.id] || raw[schema.mappings.id] || 'phantom-' + ( ++count ) ) );
+				var id       = this.src[schema.mappings.id] || raw[schema.mappings.id];
+				this.exists  = !!id;
+				this.set( 'id', id );
 			},
 			extend      : Object,
 			module      : __lib__,
@@ -25,6 +27,7 @@
 			id          : null,
 // internal properties
 			dom         : null,
+			exists      : false,
 			raw         : null,
 			schema      : null,
 			slc         : null,
@@ -80,6 +83,16 @@
 
 				noupdate === true || this.syncView();
 			},
+			toJSON         : function( extras ) {
+				var json = Object.reduce( this.src, toJSON, util.obj() );
+
+				if ( this.exists )
+					json.id = this.id;
+				else
+					delete json.id;
+
+				return json;
+			},
 // internal methods
 			bindView    : function( cmp, el ) {
 				switch ( util.type( el ) ) {
@@ -105,5 +118,10 @@
 			}, node.src );
 
 			return node;
+		}
+		function toJSON( json, val, key ) {
+			json[key] = util.merge( val );
+
+			return json;
 		}
 	}() );

@@ -104,7 +104,7 @@
 
 				this.proxy.sync( this );
 			},
-			toJSON         : function() {
+			toJSON         : function( extras ) {
 				var json = Object.reduce( this.src, toJSON, util.obj() );
 
 				if ( this.exists )
@@ -204,7 +204,7 @@
 //			if ( prop[key] && prop[key].model instanceof getClass( 'data.Model' ) )
 //				json[key] = val.toJSON();
 //			else
-				json[key] = val;
+				json[key] = util.merge( val );
 
 			return json;
 		}

@@ -39,30 +39,28 @@
 			},
 // stub overwrite methods
 			onAPICall      : function( command, data, options ) {
+				command = command in this.api ? command : 'read';
+
 				var api = this.api[command];
+
+				if ( !is_obj( options ) )
+					options = util.obj();
+
+				options.command = command;
+
 				if ( api && this.interactive && this.broadcast( 'before:' + command, data, options ) !== false )
-					this.onLoadStart( api.url, api.method, data = this.prepareData( data, api ), options, command );
+					this.onLoadStart( api.url, api.method, data = this.prepareData( data, api ), options );
 			},
 			onReqAbort     : function( xhr, options ) {
-				this.broadcast( 'abort:' + options.type, xhr, status, err );
+				this.broadcast( 'abort:' + options.command, xhr, err, options );
 			},
 			onReqError     : function( xhr, status, err, options ) {
-				this.broadcast( 'error:' + options.type, xhr, status, err );
+				this.broadcast( 'error:' + options.command, xhr, status, err, options );
 			},
 			onReqLoad      : function( data, status, xhr, options ) {
-				this.broadcast( options.type, data, status, xhr );
-			},
-			onLoadStart     : function( url, method, data, options, command ) {
-				return this.parent( url, method, data, options, command || 'read' );
+				this.broadcast( options.command, data, status, xhr, options );
 			},
 // internal methods
-			initTransport  : function( url, method, data, type ) {
-				var transport = this.parent( arguments );
-
-				transport.type = type;
-
-				return transport;
-			},
 			prepareData     : function( data, api ) {
 				return is_fun( api.data ) ? api.data( data ) : data;
 			},

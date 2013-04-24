@@ -1,7 +1,7 @@
 	lib.define( namespace( 'Gesture' ), function() {
 
 		global.addEventListener( 'beforeunload', function() {
-	//		global.removeEventListener( 'scroll',     cancel_cb,   true );
+			global.removeEventListener( 'scroll',     cancel_cb,   true );
 			global.removeEventListener( ua.mspoint ? 'MSPointerUp'   : 'touchend',   touchend,    true );
 			global.removeEventListener( ua.mspoint ? 'MSPointerMove' : 'touchmove',  touchmove,   true );
 			global.removeEventListener( ua.mspoint ? 'MSPointerDown' : 'touchstart', touchstart,  true );
@@ -9,10 +9,10 @@
 
 		var attr        = 'data-gesture-hotspot',
 			cache       = util.obj(),
-	//		cancel_cb   = touchcancel.callback( {
-	//			buffer  : 100,
-	//			delay   : 100
-	//		} ),
+			cancel_cb   = touchcancel.callback( {
+				buffer  : 100,
+				delay   : 100
+			} ),
 			current     = null,
 			doc         = global.document,
 			point       = {
@@ -31,7 +31,7 @@
 			radian      = 180 / Math.PI,
 			slc         = '[' + attr + '="true"]';
 
-	//	global.addEventListener( 'scroll',     cancel_cb,   true );
+		global.addEventListener( 'scroll',     cancel_cb,   true );
 		global.addEventListener( ua.mspoint ? 'MSPointerUp'   : 'touchend',   touchend,    true );
 		global.addEventListener( ua.mspoint ? 'MSPointerMove' : 'touchmove',  touchmove,   true );
 		global.addEventListener( ua.mspoint ? 'MSPointerDown' : 'touchstart', touchstart,  true );
@@ -116,7 +116,7 @@
 			pressure         : null,
 			scale            : null,
 			tapDelay         : 200,
-			tolerance        : 30,
+			tolerance        : 15,
 			touches          : null,
 // internal properties
 			id_dbltap        : null,

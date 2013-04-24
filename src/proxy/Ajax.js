@@ -1,17 +1,17 @@
 	define( namespace( 'proxy.Ajax' ), function () {
 		function onAbort( xhr, config ) {
 			 this.loading = false;
-			!this.interactive || status == 'abort'   || this.onReqAbort( xhr, config ).broadcast( 'abort', err, config );
+			!this.interactive || status == 'abort'   || this.onReqAbort( xhr, config.options ).broadcast( 'abort', err, config.options );
 		}
 
 		function onError( xhr, status, err, config ) {
 			 this.loading = false;
-			!this.interactive || this.onReqError( xhr, status, err ).broadcast( 'error', err, status, xhr, config );
+			!this.interactive || this.onReqError( xhr, status, err, config.options ).broadcast( 'error', err, status, xhr, config.options );
 		}
 
 		function onLoad ( data, status, xhr, config ) {
 			 this.loading = false;
-			!this.interactive || typeof data !== 'object' || this.onReqLoad( data, status, xhr ).broadcast( 'load', data, status, xhr, config );
+			!this.interactive || typeof data !== 'object' || this.onReqLoad( data, status, xhr, config.options ).broadcast( 'load', data, status, xhr, config.options );
 		}
 
 		function onTimeout() {
@@ -89,9 +89,9 @@
 					this.doRequest( this.lastConfig );
 			},
 // stub overwrite methods
-			onReqAbort     : function( xhr, config ) {},
-			onReqError     : function( xhr, status, err, config ) {},
-			onReqLoad      : function( data, status, xhr, config ) {},
+			onReqAbort     : function( xhr, options ) {},
+			onReqError     : function( xhr, status, err, options ) {},
+			onReqLoad      : function( data, status, xhr, options ) {},
 			onReqTimeout   : function( config ) {},
 // internal methods
 			createUrl      : function ( params ) {

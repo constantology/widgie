@@ -471,7 +471,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 	lib.define( namespace( 'Gesture' ), function() {
 
 		global.addEventListener( 'beforeunload', function() {
-	//		global.removeEventListener( 'scroll',     cancel_cb,   true );
+			global.removeEventListener( 'scroll',     cancel_cb,   true );
 			global.removeEventListener( ua.mspoint ? 'MSPointerUp'   : 'touchend',   touchend,    true );
 			global.removeEventListener( ua.mspoint ? 'MSPointerMove' : 'touchmove',  touchmove,   true );
 			global.removeEventListener( ua.mspoint ? 'MSPointerDown' : 'touchstart', touchstart,  true );
@@ -479,10 +479,10 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 
 		var attr        = 'data-gesture-hotspot',
 			cache       = util.obj(),
-	//		cancel_cb   = touchcancel.callback( {
-	//			buffer  : 100,
-	//			delay   : 100
-	//		} ),
+			cancel_cb   = touchcancel.callback( {
+				buffer  : 100,
+				delay   : 100
+			} ),
 			current     = null,
 			doc         = global.document,
 			point       = {
@@ -501,7 +501,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			radian      = 180 / Math.PI,
 			slc         = '[' + attr + '="true"]';
 
-	//	global.addEventListener( 'scroll',     cancel_cb,   true );
+		global.addEventListener( 'scroll',     cancel_cb,   true );
 		global.addEventListener( ua.mspoint ? 'MSPointerUp'   : 'touchend',   touchend,    true );
 		global.addEventListener( ua.mspoint ? 'MSPointerMove' : 'touchmove',  touchmove,   true );
 		global.addEventListener( ua.mspoint ? 'MSPointerDown' : 'touchstart', touchstart,  true );
@@ -586,7 +586,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			pressure         : null,
 			scale            : null,
 			tapDelay         : 200,
-			tolerance        : 30,
+			tolerance        : 15,
 			touches          : null,
 // internal properties
 			id_dbltap        : null,
@@ -938,17 +938,17 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 	define( namespace( 'proxy.Ajax' ), function () {
 		function onAbort( xhr, config ) {
 			 this.loading = false;
-			!this.interactive || status == 'abort'   || this.onReqAbort( xhr, config ).broadcast( 'abort', err, config );
+			!this.interactive || status == 'abort'   || this.onReqAbort( xhr, config.options ).broadcast( 'abort', err, config.options );
 		}
 
 		function onError( xhr, status, err, config ) {
 			 this.loading = false;
-			!this.interactive || this.onReqError( xhr, status, err ).broadcast( 'error', err, status, xhr, config );
+			!this.interactive || this.onReqError( xhr, status, err, config.options ).broadcast( 'error', err, status, xhr, config.options );
 		}
 
 		function onLoad ( data, status, xhr, config ) {
 			 this.loading = false;
-			!this.interactive || typeof data !== 'object' || this.onReqLoad( data, status, xhr ).broadcast( 'load', data, status, xhr, config );
+			!this.interactive || typeof data !== 'object' || this.onReqLoad( data, status, xhr, config.options ).broadcast( 'load', data, status, xhr, config.options );
 		}
 
 		function onTimeout() {
@@ -1026,9 +1026,9 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 					this.doRequest( this.lastConfig );
 			},
 // stub overwrite methods
-			onReqAbort     : function( xhr, config ) {},
-			onReqError     : function( xhr, status, err, config ) {},
-			onReqLoad      : function( data, status, xhr, config ) {},
+			onReqAbort     : function( xhr, options ) {},
+			onReqError     : function( xhr, status, err, options ) {},
+			onReqLoad      : function( data, status, xhr, options ) {},
 			onReqTimeout   : function( config ) {},
 // internal methods
 			createUrl      : function ( params ) {
@@ -1149,30 +1149,28 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			},
 // stub overwrite methods
 			onAPICall      : function( command, data, options ) {
+				command = command in this.api ? command : 'read';
+
 				var api = this.api[command];
+
+				if ( !is_obj( options ) )
+					options = util.obj();
+
+				options.command = command;
+
 				if ( api && this.interactive && this.broadcast( 'before:' + command, data, options ) !== false )
-					this.onLoadStart( api.url, api.method, data = this.prepareData( data, api ), options, command );
+					this.onLoadStart( api.url, api.method, data = this.prepareData( data, api ), options );
 			},
 			onReqAbort     : function( xhr, options ) {
-				this.broadcast( 'abort:' + options.type, xhr, status, err );
+				this.broadcast( 'abort:' + options.command, xhr, err, options );
 			},
 			onReqError     : function( xhr, status, err, options ) {
-				this.broadcast( 'error:' + options.type, xhr, status, err );
+				this.broadcast( 'error:' + options.command, xhr, status, err, options );
 			},
 			onReqLoad      : function( data, status, xhr, options ) {
-				this.broadcast( options.type, data, status, xhr );
-			},
-			onLoadStart     : function( url, method, data, options, command ) {
-				return this.parent( url, method, data, options, command || 'read' );
+				this.broadcast( options.command, data, status, xhr, options );
 			},
 // internal methods
-			initTransport  : function( url, method, data, type ) {
-				var transport = this.parent( arguments );
-
-				transport.type = type;
-
-				return transport;
-			},
 			prepareData     : function( data, api ) {
 				return is_fun( api.data ) ? api.data( data ) : data;
 			},
@@ -1359,7 +1357,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 
 				this.proxy.sync( this );
 			},
-			toJSON         : function() {
+			toJSON         : function( extras ) {
 				var json = Object.reduce( this.src, toJSON, util.obj() );
 
 				if ( this.exists )
@@ -1459,7 +1457,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 //			if ( prop[key] && prop[key].model instanceof getClass( 'data.Model' ) )
 //				json[key] = val.toJSON();
 //			else
-				json[key] = val;
+				json[key] = util.merge( val );
 
 			return json;
 		}
@@ -1480,7 +1478,9 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				this.raw     = raw;
 				this.schema  = schema;
 				this.src     = schema.coerceItem( raw );
-				this.set( 'id', ( this.src[schema.mappings.id] || raw[schema.mappings.id] || 'phantom-' + ( ++count ) ) );
+				var id       = this.src[schema.mappings.id] || raw[schema.mappings.id];
+				this.exists  = !!id;
+				this.set( 'id', id );
 			},
 			extend      : Object,
 			module      : __lib__,
@@ -1496,6 +1496,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			id          : null,
 // internal properties
 			dom         : null,
+			exists      : false,
 			raw         : null,
 			schema      : null,
 			slc         : null,
@@ -1551,6 +1552,16 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 
 				noupdate === true || this.syncView();
 			},
+			toJSON         : function( extras ) {
+				var json = Object.reduce( this.src, toJSON, util.obj() );
+
+				if ( this.exists )
+					json.id = this.id;
+				else
+					delete json.id;
+
+				return json;
+			},
 // internal methods
 			bindView    : function( cmp, el ) {
 				switch ( util.type( el ) ) {
@@ -1576,6 +1587,11 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			}, node.src );
 
 			return node;
+		}
+		function toJSON( json, val, key ) {
+			json[key] = util.merge( val );
+
+			return json;
 		}
 	}() );
 
