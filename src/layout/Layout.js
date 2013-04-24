@@ -3,6 +3,8 @@
 		constructor      : function Layout( config ) {
 			util.copy( this, config || {} );
 
+			this.afterLayout_ = this.afterLayout.callback( { ctx : this, delay : 50 } );
+
 			if ( this.cmp.rendered )
 				this.init();
 			else
@@ -26,6 +28,9 @@
 		enable           : function() {
 			this.disabled = false;
 		},
+		forceLayout       : function() {
+			this.layout( true );
+		},
 		layout           : function( force ) {
 			force = force === true;
 
@@ -39,7 +44,7 @@
 			}
 
 			this.onLayout( force )
-				.afterLayout( force );
+				.afterLayout_( force );
 
 			return;
 		},
@@ -67,9 +72,9 @@
 						   : el.offsetParent;
 
 			cmp.observe( {
-				append : 'layout',
-				update : 'layout',
-				ctx    : this
+				'change:dom' : 'forceLayout',
+				 ctx         :  this,
+				 options     : { delay : 200 }
 			} );
 
 			!cmp.rendered || !cmp.active || this.layout();

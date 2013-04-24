@@ -161,8 +161,12 @@
 			},
 			last          : function() { return this.getAt( -1 ); },
 			load          : function( data, options ) {
-				!data.success || this.add( data.items, !!options );
-				!options      || this.onChangeData( false, options );
+				if ( data.success && data.items ) {
+					this.add( data.items, !!options );
+					!options || this.onChangeData( false, options );
+				}
+				else
+					this.broadcast( 'load:empty', data, options );
 			},
 			map           : function( fn, ctx ) {
 				return this.view.ovalues.map( fn, ctx || this );
@@ -208,10 +212,10 @@
 			},
 			setProxy      : function( proxy ) {
 				if ( this.proxy ) {
-					this.proxy.ignore( 'error',     this.onLoadError, this )
-							  .ignore( 'load',      this.onLoad,      this )
-							  .ignore( 'loadstart', this.onLoadStart, this )
-							  .ignore( 'timeout',   this.onLoadError, this );
+					this.proxy.ignore( 'error',     'onLoadError', this )
+							  .ignore( 'load',      'onLoad',      this )
+							  .ignore( 'loadstart', 'onLoadStart', this )
+							  .ignore( 'timeout',   'onLoadError', this );
 
 					delete this.proxy;
 				}
@@ -320,8 +324,8 @@
 			onLoad         : function( proxy, data, status, xhr, config ) {
 				this.broadcast( 'load:complete', data, status, xhr, config ).load( this.schema.coerce( data ), config.options );
 			},
-			onLoadError    : function( proxy, err, status ) {
-				this.broadcast( 'load:error', err, status );
+			onLoadError    : function( proxy, err, status, xhr, config ) {
+				this.broadcast( 'load:error', err, status, xhr, config.options );
 			},
 			onLoadStart    : function() {
 				this.broadcast( 'load:start' );

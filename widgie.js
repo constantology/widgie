@@ -1962,8 +1962,12 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			},
 			last          : function() { return this.getAt( -1 ); },
 			load          : function( data, options ) {
-				!data.success || this.add( data.items, !!options );
-				!options      || this.onChangeData( false, options );
+				if ( data.success && data.items ) {
+					this.add( data.items, !!options );
+					!options || this.onChangeData( false, options );
+				}
+				else
+					this.broadcast( 'load:empty', data, options );
 			},
 			map           : function( fn, ctx ) {
 				return this.view.ovalues.map( fn, ctx || this );
@@ -2009,10 +2013,10 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			},
 			setProxy      : function( proxy ) {
 				if ( this.proxy ) {
-					this.proxy.ignore( 'error',     this.onLoadError, this )
-							  .ignore( 'load',      this.onLoad,      this )
-							  .ignore( 'loadstart', this.onLoadStart, this )
-							  .ignore( 'timeout',   this.onLoadError, this );
+					this.proxy.ignore( 'error',     'onLoadError', this )
+							  .ignore( 'load',      'onLoad',      this )
+							  .ignore( 'loadstart', 'onLoadStart', this )
+							  .ignore( 'timeout',   'onLoadError', this );
 
 					delete this.proxy;
 				}
@@ -2121,8 +2125,8 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			onLoad         : function( proxy, data, status, xhr, config ) {
 				this.broadcast( 'load:complete', data, status, xhr, config ).load( this.schema.coerce( data ), config.options );
 			},
-			onLoadError    : function( proxy, err, status ) {
-				this.broadcast( 'load:error', err, status );
+			onLoadError    : function( proxy, err, status, xhr, config ) {
+				this.broadcast( 'load:error', err, status, xhr, config.options );
 			},
 			onLoadStart    : function() {
 				this.broadcast( 'load:start' );
@@ -2860,6 +2864,8 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		constructor      : function Layout( config ) {
 			util.copy( this, config || {} );
 
+			this.afterLayout_ = this.afterLayout.callback( { ctx : this, delay : 50 } );
+
 			if ( this.cmp.rendered )
 				this.init();
 			else
@@ -2883,6 +2889,9 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		enable           : function() {
 			this.disabled = false;
 		},
+		forceLayout       : function() {
+			this.layout( true );
+		},
 		layout           : function( force ) {
 			force = force === true;
 
@@ -2896,7 +2905,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			}
 
 			this.onLayout( force )
-				.afterLayout( force );
+				.afterLayout_( force );
 
 			return;
 		},
@@ -2924,9 +2933,9 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 						   : el.offsetParent;
 
 			cmp.observe( {
-				append : 'layout',
-				update : 'layout',
-				ctx    : this
+				'change:dom' : 'forceLayout',
+				 ctx         :  this,
+				 options     : { delay : 200 }
 			} );
 
 			!cmp.rendered || !cmp.active || this.layout();
