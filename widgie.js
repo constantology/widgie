@@ -471,7 +471,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 	lib.define( namespace( 'Gesture' ), function() {
 
 		global.addEventListener( 'beforeunload', function() {
-			global.removeEventListener( 'scroll',     cancel_cb,   true );
+			global.removeEventListener( 'scroll', cancel_cb, true );
 			global.removeEventListener( ua.mspoint ? 'MSPointerUp'   : 'touchend',   touchend,    true );
 			global.removeEventListener( ua.mspoint ? 'MSPointerMove' : 'touchmove',  touchmove,   true );
 			global.removeEventListener( ua.mspoint ? 'MSPointerDown' : 'touchstart', touchstart,  true );
@@ -1119,7 +1119,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 					url    : 'delete'
 				},
 				read   : {
-					method : 'POST',
+					method : 'GET',
 					url    : 'get'
 				},
 				update : {
@@ -1148,6 +1148,9 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				this.onAPICall( 'update', data, options );
 			},
 // stub overwrite methods
+			createUrl      : function( data, api ) {
+				return api.url || this.urlBase;
+			},
 			onAPICall      : function( command, data, options ) {
 				command = command in this.api ? command : 'read';
 
@@ -1159,7 +1162,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				options.command = command;
 
 				if ( api && this.interactive && this.broadcast( 'before:' + command, data, options ) !== false )
-					this.onLoadStart( api.url, api.method, data = this.prepareData( data, api ), options );
+					this.onLoadStart( this.createUrl( data, api ), api.method, data = this.prepareData( data, api ), options );
 			},
 			onReqAbort     : function( xhr, options ) {
 				this.broadcast( 'abort:' + options.command, xhr, err, options );
@@ -1217,33 +1220,49 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			api            : null,
 
 // public methods
-			sync           : function( model ) {
-				var cmd = 'read';
+			create         : function( data, options ) {
+				var id = options.model.schema.mappings.id;
+				delete data[id];
+				this.parent( data, options );
+			},
+			delete         : function( data, options ) {
+				var id = options.model.schema.mappings.id;
+				this.parent( { id : data[id] || options.model[id] }, options );
+			},
+			read           : function( data, options ) {
+				var id = options.model.schema.mappings.id;
+				this.parent( { id : data[id] || options.model[id] }, options );
+			},
+			sync           : function( model, options ) {
+				var command = 'read';
 
 				if ( model.dirty )
-					cmd = this.exists ? 'update' : 'create';
+					command = this.exists ? 'update' : 'create';
 
-				!( cmd in this ) || this[cmd]( model );
+				if ( !is_obj( options ) )
+					options = util.obj();
+
+				options.model = model;
+
+				!( command in this.api ) || this[command]( model.toJSON(), options );
 			},
+//			update         : function( data, options ) {
+//			},
 // stub overwrite methods
-			onLoadStart     : function( model ) {
-				this.queue[model.id] = model;
-
+			onReqAbort     : function( xhr, options ) {
+				this.parent( arguments );
+				options.model.onSyncAbort( options.command );
+			},
+			onReqError     : function( xhr, status, err, options ) {
+				this.parent( arguments );
+				options.model.onSyncError( err, options.command );
+			},
+			onReqLoad      : function( data, status, xhr, options ) {
+				this.parent( arguments );
+				options.model.onSync( data, options.command );
 			},
 // internal methods
-			initTransport   : function( model ) {
-				var args      = Array.coerce( arguments, 1 ),
-					transport = this.parent.apply( this, args );
-
-				transport.model = model;
-
-				return transport;
-			},
-// constructor methods
-			init            : function() {
-				this.parent( arguments );
-				this.queue = util.obj();
-			}
+			onBeforeLoad    : function() {}
 		};
 	}() );
 
@@ -1257,34 +1276,58 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		return {
 // class configuration
 			afterdefine    : function( Model ) {
-				var p = Model.prototype, schema = p.schema; // noinspection FallthroughInSwitchStatementJS
-				switch ( util.ntype( schema ) ) {
-					case 'array'    : schema = { properties : schema }; // allow fall-through
-					case 'object'   : schema = schema instanceof getClass( 'data.Schema' )
-											 ? schema
-											 : create( 'data.Schema', schema );
-											   break;
-					case 'function' : schema = new Schema;
+				var p = Model.prototype, proxy = p.proxy, schema = p.schema; // noinspection FallthroughInSwitchStatementJS
+
+				if ( proxy ) {
+					switch ( util.ntype( proxy ) ) {
+						case 'object'   : proxy = proxy instanceof getClass( 'proxy.Ajax' )
+												 ? proxy
+												 : create( 'data.ModelSync', proxy );
+												   break;
+						case 'string'   : proxy = getClass( proxy );
+						case 'function' : proxy = new proxy;
+					}
+
+					Model.__proxy__ = proxy;
+
+					delete p.proxy;
 				}
-				Model.__schema__ = schema;
+
+				if ( schema ) {
+					switch ( util.ntype( schema ) ) {
+						case 'array'    : schema = { properties : schema }; // allow fall-through
+						case 'object'   : schema = schema instanceof getClass( 'data.Schema' )
+												 ? schema
+												 : create( 'data.Schema', schema );
+												   break;
+						case 'string'   : schema = getClass( schema );
+						case 'function' : schema = new schema;
+					}
+
+					Model.__schema__ = schema;
+
+					delete p.schema;
+				}
 			},
 			beforeinstance : function( Model, instance ) {
+				instance.proxy  = Model.__proxy__;
 				instance.schema = Model.__schema__;
 			},
 			constructor    : function DataModel( raw ) {
+				this.parent();
+
 				this.changes = util.obj();
 				this.dom     = util.obj();
 				this.raw     = raw;
 				this.src     = this.schema.coerceItem( raw );
 
-				var id       = this.src[schema.mappings.id] || raw[schema.mappings.id];
+				var schema   = this.schema,
+					id       = this.src[schema.mappings.id] || raw[schema.mappings.id];
 				this.exists  = !!id;
 				this.id      = id || 'phantom-' + ( ++count );
 
-				this.setProxy( this.proxy );
-
 				if ( this.exists ) {
-					util.len( this.src ) || this.autoLoad === false || this.sync();
+					( util.len( raw ) - 1 ) || this.autoLoad === false || this.sync();
 					this.set( 'id', id );
 				}
 			},
@@ -1380,7 +1423,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				this.dom[cmp.id] = el.attr( 'data-node-id', this.id );
 			},
 			onSet         : function( key, val, noupdate ) {
-				var change = false, clean, schema = this.schema, prop = schema.prop;
+				var change = false, clean, schema = this.schema, prop = schema.property;
 
 				if ( key in prop ) {
 					clean = prop[key].coerce( val );
@@ -1398,33 +1441,28 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 					this.slc = '[data-id="' + this.id + '"], [data-node-id="' + this.id + '"]';
 				}
 			},
-			setProxy      : function( proxy ) { // noinspection FallthroughInSwitchStatementJS
-				switch ( util.ntype( proxy ) ) {
-					case 'string' : proxy = { urlBase : proxy }; // allow fall-through
-					case 'object' :
-						if ( !( proxy instanceof getClass( 'proxy.Ajax' ) ) )
-							proxy  = create( 'proxy.ModelSync', proxy );
+			onSync        : function( raw, command ) {
+				var data = this.schema.coerceItem( raw );
 
-						this.proxy = proxy;
-						break;
-					default       : ++this.suspendSync;
-				}
+				if ( !is_obj( data ) ) return;
+
+				this.suspendEvents().set( data );
+				Object.keys( data ).forEach( removeChange, this.changes );
+				this.raw = this.schema.getItemRoot( raw );
+				this.resumeEvents().broadcast( 'sync', command );
 			},
-			setSchema     : function( schema ) { // noinspection FallthroughInSwitchStatementJS
-				switch ( util.ntype( schema ) ) {
-					case 'array'  : schema = { properties : schema }; // allow fall-through
-					case 'object' :
-						if ( !( schema instanceof getClass( 'data.Schema' ) ) )
-							schema  = create( 'data.Schema', schema );
-
-						this.schema = schema;
-						break;
-				}
+			onSyncAbort   : function( command ) {
+				this.broadcast( 'sync:abort', command );
+			},
+			onSyncError   : function( err, command ) {
+				this.broadcast( 'sync:error', command, err );
 			},
 			syncView       : function() {
 				Object.reduce( this.dom, syncView, this );
 			}
 		};
+
+		function removeChange( key ) { delete this[key]; }
 
 		function syncData( cmd, proxy, data, status, xhr ) {
 			var id, m = this.schema.mappings;
@@ -1533,7 +1571,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 					return;
 				}
 
-				var clean, schema = this.schema, prop = schema.prop;
+				var clean, schema = this.schema, prop = schema.property;
 
 				this.raw[key] = val;
 
@@ -1602,20 +1640,40 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 	;!function() {
 		define( namespace( 'data.Schema' ), {
 	// class configuration
+			afterdefine    : function( Schema ) {
+				var p    = Schema.prototype;
+
+				Schema.__mappings__   = p.mappings;
+				Schema.__properties__ = p.properties;
+
+				delete p.mappings; delete p.properties;
+			},
+			beforeinstance : function( Schema, instance, args ) {
+				var has_config = is_obj( args[0] );
+
+				if ( is_obj( Schema.__mappings__ ) ) {
+					instance.mappings   = has_config
+										? util.update( args[0].mappings   || util.obj(), Schema.__mappings__   )
+										: util.update( Schema.__mappings__   );
+					!has_config || delete args[0].mappings;
+				}
+				if ( typeof Schema.__properties__ == 'object' ) {
+					instance.properties = has_config
+										? util.update( args[0].properties || util.obj(), Schema.__properties__ )
+										: util.update( Schema.__properties__ );
+					!has_config || delete args[0].properties;
+				}
+			},
 			constructor : function DataSchema( config ) {
 				if ( is_arr( config ) )
 					config = { properties : config };
 
-				is_obj( config ) || error( {
-					instance : this,
-					method   : 'constructor',
-					message  : 'Invalid data.Schema configuration',
-					name     : error.code.DATA_SCHEMA_CONFIG
-				} );
+				if ( !is_obj( config ) )
+					config = util.obj();
 
-				this.mappings   = util.update( config.mappings || util.obj(), DEFAULT_MAPPINGS );
-				this.properties = config.properties.map( to_property, this );
-				this.prop       = this.properties.reduce( to_prop_map, util.obj() );
+				this.mappings   = util.update( config.mappings || this.mappings || util.obj(), DEFAULT_MAPPINGS );
+				this.properties = ( config.properties || this.properties ).map( to_property, this );
+				this.property   = this.properties.reduce( to_prop_map, util.obj() );
 			},
 			extend      : Object,
 			module      : __lib__,
@@ -1624,6 +1682,8 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			mappings    : null,
 			properties  : null,
 
+	// public properties
+			property    : null,
 	// public methods
 			coerce      : function( raw, json ) {
 				var items, success, total;
@@ -1631,7 +1691,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				switch ( util.ntype( raw ) ) {
 					case 'array'  : items = raw; success = true; total = items.length; break;
 					case 'object' :
-						items   = this.mappings.items   in raw ? raw[this.mappings.items]   : [];
+						items   = this.getRoot( raw );
 						total   = this.mappings.total   in raw ? raw[this.mappings.total]   : items.length;
 						success = this.mappings.success in raw ? raw[this.mappings.success] : !!total;
 						break;
@@ -1646,8 +1706,16 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			},
 			coerceItem  : function( raw ) {
 				var data = util.obj();
-				this.properties.invoke( 'process', raw, data );
+				this.properties.invoke( 'process', util.update( this.getItemRoot( raw ) ), data );
 				return data;
+			},
+			getItemRoot : function( raw ) {
+				var item = this.mappings.item;
+				return item && item in raw ? raw[item] : raw;
+			},
+			getRoot     : function( raw ) {
+				var items = this.mappings.items;
+				return items && items in raw ? raw[items] : raw;
 			},
 			toNode      : function( raw ) {
 				return __lib__.data.Node.create( this, raw );
@@ -1655,7 +1723,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			valid       : function( data ) {
 				return Object.keys( data ).every( function( prop ) {
 					return prop in this && this[prop].valid( data[prop] );
-				}, this.prop );
+				}, this.property );
 			}
 		} );
 
@@ -1706,6 +1774,16 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 
 				this.fmt = FORMAT[util.ntype( this.format )] || this.fmt;
 
+				if ( this.schema ) // noinspection FallthroughInSwitchStatementJS
+					switch ( util.ntype( this.schema ) ) {
+						case 'array'    : this.schema = { properties : this.schema }; // allow fall-through
+						case 'object'   : this.schema = this.schema instanceof getClass( 'data.Schema' )
+												 ? this.schema
+												 : create( 'data.Schema', this.schema );
+												   break;
+						case 'string'   : this.schema = getClass( this.schema );      // allow fall-through
+						case 'function' : this.schema = new this.schema;
+					}
 			},
 			extend      : Object,
 			module      : __lib__,
@@ -1715,7 +1793,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			default     : null,
 			format      : null,
 			id          : null,
-			model       : null,
+			schema      : null,
 			type        : 'object',
 
 	// internal properties
@@ -1766,6 +1844,8 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			},
 			TYPE             = DataSchema.TYPE = { // todo: these may need a lil' more work
 				array   : function( v ) {
+					if ( this.schema )
+						return this.schema.coerce( v );
 					return Array.isArray( v ) ? v : util.exists( v ) ? Array.coerce( v ) : [];
 				},
 				boolean : function( v ) {
@@ -1791,6 +1871,8 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 					return Number( v ) == v ? Number( v ) : this.default;
 				},
 				object  : function( v ) {
+					if ( this.schema )
+						return this.schema.coerceItem( v );
 					return v === UNDEF ? this.default : v;
 				},
 				string  : function( v ) {
@@ -3296,7 +3378,8 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		onAction        : function( action, evt ) {
 			if ( is_fun( this[action] ) )
 				this[action]( evt );
-		}
+		},
+		syncSize        : function() {}
 	} );
 
 	getClass( 'Component' ).count = 999;
