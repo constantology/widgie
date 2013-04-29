@@ -135,16 +135,7 @@
 
 				this.fmt = FORMAT[util.ntype( this.format )] || this.fmt;
 
-				if ( this.schema ) // noinspection FallthroughInSwitchStatementJS
-					switch ( util.ntype( this.schema ) ) {
-						case 'array'    : this.schema = { properties : this.schema }; // allow fall-through
-						case 'object'   : this.schema = this.schema instanceof getClass( 'data.Schema' )
-												 ? this.schema
-												 : create( 'data.Schema', this.schema );
-												   break;
-						case 'string'   : this.schema = getClass( this.schema );      // allow fall-through
-						case 'function' : this.schema = new this.schema;
-					}
+				this.schema = lookupSchema( this.schema );
 			},
 			extend      : Object,
 			module      : __lib__,
