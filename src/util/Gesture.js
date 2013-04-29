@@ -1,7 +1,7 @@
 	lib.define( namespace( 'Gesture' ), function() {
 
 		global.addEventListener( 'beforeunload', function() {
-			global.removeEventListener( 'scroll',     cancel_cb,   true );
+			global.removeEventListener( 'scroll', cancel_cb, true );
 			global.removeEventListener( ua.mspoint ? 'MSPointerUp'   : 'touchend',   touchend,    true );
 			global.removeEventListener( ua.mspoint ? 'MSPointerMove' : 'touchmove',  touchmove,   true );
 			global.removeEventListener( ua.mspoint ? 'MSPointerDown' : 'touchstart', touchstart,  true );
