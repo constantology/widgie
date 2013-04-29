@@ -332,7 +332,8 @@
 		onAction        : function( action, evt ) {
 			if ( is_fun( this[action] ) )
 				this[action]( evt );
-		}
+		},
+		syncSize        : function() {}
 	} );
 
 	getClass( 'Component' ).count = 999;
