@@ -105,6 +105,35 @@
 		} );
 	}
 
+	function lookupProxy( proxy, ProxyClass ) { // noinspection FallthroughInSwitchStatementJS
+		switch ( util.ntype( proxy ) ) {
+			case 'object'   : proxy = proxy instanceof getClass( 'proxy.Ajax' )
+									 ? proxy
+									 : create( ( ProxyClass || 'proxy.Ajax' ), proxy );
+									   break;
+			case 'string'   : proxy = getClass( proxy ); // allow fall-through
+			case 'function' : proxy = new proxy;
+			default         : proxy = null;
+		}
+
+		return proxy || null;
+	}
+
+	function lookupSchema( schema, SchemaClass ) { // noinspection FallthroughInSwitchStatementJS
+		switch ( util.ntype( schema ) ) {
+			case 'array'    : schema = { properties : schema }; // allow fall-through
+			case 'object'   : schema = schema instanceof getClass( 'data.Schema' )
+									 ? schema
+									 : create( SchemaClass || 'data.Schema', schema );
+									   break;
+			case 'string'   : schema = getClass( schema );      // allow fall-through
+			case 'function' : schema = new schema;
+			default         : schema = null;
+		}
+
+		return schema || null
+	}
+
 	function register( what, Widgie ) {
 		var i = what.indexOf( 'widgie' ),
 			internal;
@@ -1276,38 +1305,12 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		return {
 // class configuration
 			afterdefine    : function( Model ) {
-				var p = Model.prototype, proxy = p.proxy, schema = p.schema; // noinspection FallthroughInSwitchStatementJS
+				var p = Model.prototype;
 
-				if ( proxy ) {
-					switch ( util.ntype( proxy ) ) {
-						case 'object'   : proxy = proxy instanceof getClass( 'proxy.Ajax' )
-												 ? proxy
-												 : create( 'data.ModelSync', proxy );
-												   break;
-						case 'string'   : proxy = getClass( proxy );
-						case 'function' : proxy = new proxy;
-					}
-
-					Model.__proxy__ = proxy;
-
+				if ( Model.__proxy__  = lookupProxy(  p.proxy,  'proxy.ModelSync' ) )
 					delete p.proxy;
-				}
-
-				if ( schema ) {
-					switch ( util.ntype( schema ) ) {
-						case 'array'    : schema = { properties : schema }; // allow fall-through
-						case 'object'   : schema = schema instanceof getClass( 'data.Schema' )
-												 ? schema
-												 : create( 'data.Schema', schema );
-												   break;
-						case 'string'   : schema = getClass( schema );
-						case 'function' : schema = new schema;
-					}
-
-					Model.__schema__ = schema;
-
+				if ( Model.__schema__ = lookupSchema( p.schema, 'data.Schema' ) )
 					delete p.schema;
-				}
 			},
 			beforeinstance : function( Model, instance ) {
 				instance.proxy  = Model.__proxy__;
@@ -2118,15 +2121,11 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 
 					delete this.proxy;
 				}
-				// noinspection FallthroughInSwitchStatementJS
-				switch ( util.ntype( proxy ) ) { // todo: when we have other proxies we can add support for them
-					case 'string' : proxy = { urlBase : proxy }; // allow fall-through
-					case 'object' :
-						if ( !( proxy instanceof getClass( 'proxy.Ajax' ) ) )
-							proxy = create( 'proxy.Ajax', proxy );
 
-						this.proxy = proxy;
+				if ( is_str( proxy ) )
+					proxy = { urlBase : proxy };
 
+				if ( this.proxy = lookupProxy( proxy ) ) {
 						this.proxy.observe( {
 							error     : 'onLoadError', load    : 'onLoad',
 							loadstart : 'onLoadStart', timeout : 'onLoadError',
@@ -2134,21 +2133,11 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 						} );
 
 						this.broadcast( 'set:proxy' );
-						break;
 				}
 			},
 			setSchema     : function( schema ) { // noinspection FallthroughInSwitchStatementJS
-				switch ( util.ntype( schema ) ) {
-					case 'array'  : schema = { properties : schema }; // allow fall-through
-					case 'object' :
-						if ( !( schema instanceof getClass( 'data.Schema' ) ) )
-							schema = create( 'data.Schema', schema );
-
-						this.schema = schema;
-
-						this.broadcast( 'set:schema' );
-						break;
-				}
+				if ( this.schema = lookupSchema( schema ) )
+					this.broadcast( 'set:schema' );
 			},
 			sort          : function( fn, ctx ) {
 				this.updateView( this.view.ovalues.slice().sort( fn.bind( ctx || this ) ) );
@@ -2281,20 +2270,11 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 
 	define( namespace( 'mixins.DataProcessor' ), {
 // class configuration
-		constructor : function DataProcessor() { //noinspection FallthroughInSwitchStatementJS
-			switch ( util.ntype( this.schema ) ) {
-				case 'array' : case 'object' :
-					if ( !( this.schema instanceof getClass( 'DataTransform' ) ) )
-						this.schema = create( 'DataTransform', this.schema );
-					break;
-			}
-		},
+		constructor : function DataProcessor() {},
 		extend      : Object,
 		module      : __lib__,
 
 // instance configuration
-		itemsProp   : 'items',
-		schema      : null,
 
 // public methods
 		parse       : function( tpl, data ) { return tpl ? api.tpl.parse( tpl, this.prepare( data ) ) : ''; },
@@ -3723,24 +3703,15 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				this.parent( arguments ).initProxy();
 			},
 			initProxy    : function() {
-				var proxy = this.proxy; // noinspection FallthroughInSwitchStatementJS
+				if ( is_str( this.proxy ) )
+					this.proxy  = { urlBase : this.proxy };
 
-				switch ( util.ntype( proxy ) ) { // todo: when we have other proxies we can add support for them
-					case 'string' : proxy = { urlBase : proxy }; // allow fall-through
-					case 'object' :
-						if ( !( proxy instanceof getClass( 'proxy.Ajax' ) ) )
-							proxy = create( 'proxy.Ajax', proxy );
-
-						this.proxy = proxy;
-
-						this.proxy.observe( {
-							error     : 'onLoadError', load    : 'onLoad',
-							loadstart : 'onLoadStart', timeout : 'onLoadError',
-							ctx       : this
-						} );
-
-						break;
-				}
+				if ( this.proxy = lookupProxy( this.proxy ) )
+					this.proxy.observe( {
+						error     : 'onLoadError', load    : 'onLoad',
+						loadstart : 'onLoadStart', timeout : 'onLoadError',
+						ctx       : this
+					} );
 			},
 			registerEvents : function() {
 				this.parent( arguments ).observe( {

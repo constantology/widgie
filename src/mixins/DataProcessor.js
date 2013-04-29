@@ -1,19 +1,10 @@
 	define( namespace( 'mixins.DataProcessor' ), {
 // class configuration
-		constructor : function DataProcessor() { //noinspection FallthroughInSwitchStatementJS
-			switch ( util.ntype( this.schema ) ) {
-				case 'array' : case 'object' :
-					if ( !( this.schema instanceof getClass( 'DataTransform' ) ) )
-						this.schema = create( 'DataTransform', this.schema );
-					break;
-			}
-		},
+		constructor : function DataProcessor() {},
 		extend      : Object,
 		module      : __lib__,
 
 // instance configuration
-		itemsProp   : 'items',
-		schema      : null,
 
 // public methods
 		parse       : function( tpl, data ) { return tpl ? api.tpl.parse( tpl, this.prepare( data ) ) : ''; },

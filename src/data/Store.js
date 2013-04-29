@@ -219,15 +219,11 @@
 
 					delete this.proxy;
 				}
-				// noinspection FallthroughInSwitchStatementJS
-				switch ( util.ntype( proxy ) ) { // todo: when we have other proxies we can add support for them
-					case 'string' : proxy = { urlBase : proxy }; // allow fall-through
-					case 'object' :
-						if ( !( proxy instanceof getClass( 'proxy.Ajax' ) ) )
-							proxy = create( 'proxy.Ajax', proxy );
 
-						this.proxy = proxy;
+				if ( is_str( proxy ) )
+					proxy = { urlBase : proxy };
 
+				if ( this.proxy = lookupProxy( proxy ) ) {
 						this.proxy.observe( {
 							error     : 'onLoadError', load    : 'onLoad',
 							loadstart : 'onLoadStart', timeout : 'onLoadError',
@@ -235,21 +231,11 @@
 						} );
 
 						this.broadcast( 'set:proxy' );
-						break;
 				}
 			},
 			setSchema     : function( schema ) { // noinspection FallthroughInSwitchStatementJS
-				switch ( util.ntype( schema ) ) {
-					case 'array'  : schema = { properties : schema }; // allow fall-through
-					case 'object' :
-						if ( !( schema instanceof getClass( 'data.Schema' ) ) )
-							schema = create( 'data.Schema', schema );
-
-						this.schema = schema;
-
-						this.broadcast( 'set:schema' );
-						break;
-				}
+				if ( this.schema = lookupSchema( schema ) )
+					this.broadcast( 'set:schema' );
 			},
 			sort          : function( fn, ctx ) {
 				this.updateView( this.view.ovalues.slice().sort( fn.bind( ctx || this ) ) );

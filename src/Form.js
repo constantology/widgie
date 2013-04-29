@@ -130,24 +130,15 @@
 				this.parent( arguments ).initProxy();
 			},
 			initProxy    : function() {
-				var proxy = this.proxy; // noinspection FallthroughInSwitchStatementJS
+				if ( is_str( this.proxy ) )
+					this.proxy  = { urlBase : this.proxy };
 
-				switch ( util.ntype( proxy ) ) { // todo: when we have other proxies we can add support for them
-					case 'string' : proxy = { urlBase : proxy }; // allow fall-through
-					case 'object' :
-						if ( !( proxy instanceof getClass( 'proxy.Ajax' ) ) )
-							proxy = create( 'proxy.Ajax', proxy );
-
-						this.proxy = proxy;
-
-						this.proxy.observe( {
-							error     : 'onLoadError', load    : 'onLoad',
-							loadstart : 'onLoadStart', timeout : 'onLoadError',
-							ctx       : this
-						} );
-
-						break;
-				}
+				if ( this.proxy = lookupProxy( this.proxy ) )
+					this.proxy.observe( {
+						error     : 'onLoadError', load    : 'onLoad',
+						loadstart : 'onLoadStart', timeout : 'onLoadError',
+						ctx       : this
+					} );
 			},
 			registerEvents : function() {
 				this.parent( arguments ).observe( {

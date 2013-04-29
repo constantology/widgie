@@ -98,6 +98,35 @@
 		} );
 	}
 
+	function lookupProxy( proxy, ProxyClass ) { // noinspection FallthroughInSwitchStatementJS
+		switch ( util.ntype( proxy ) ) {
+			case 'object'   : proxy = proxy instanceof getClass( 'proxy.Ajax' )
+									 ? proxy
+									 : create( ( ProxyClass || 'proxy.Ajax' ), proxy );
+									   break;
+			case 'string'   : proxy = getClass( proxy ); // allow fall-through
+			case 'function' : proxy = new proxy;
+			default         : proxy = null;
+		}
+
+		return proxy || null;
+	}
+
+	function lookupSchema( schema, SchemaClass ) { // noinspection FallthroughInSwitchStatementJS
+		switch ( util.ntype( schema ) ) {
+			case 'array'    : schema = { properties : schema }; // allow fall-through
+			case 'object'   : schema = schema instanceof getClass( 'data.Schema' )
+									 ? schema
+									 : create( SchemaClass || 'data.Schema', schema );
+									   break;
+			case 'string'   : schema = getClass( schema );      // allow fall-through
+			case 'function' : schema = new schema;
+			default         : schema = null;
+		}
+
+		return schema || null
+	}
+
 	function register( what, Widgie ) {
 		var i = what.indexOf( 'widgie' ),
 			internal;

@@ -4,38 +4,12 @@
 		return {
 // class configuration
 			afterdefine    : function( Model ) {
-				var p = Model.prototype, proxy = p.proxy, schema = p.schema; // noinspection FallthroughInSwitchStatementJS
+				var p = Model.prototype;
 
-				if ( proxy ) {
-					switch ( util.ntype( proxy ) ) {
-						case 'object'   : proxy = proxy instanceof getClass( 'proxy.Ajax' )
-												 ? proxy
-												 : create( 'data.ModelSync', proxy );
-												   break;
-						case 'string'   : proxy = getClass( proxy );
-						case 'function' : proxy = new proxy;
-					}
-
-					Model.__proxy__ = proxy;
-
+				if ( Model.__proxy__  = lookupProxy(  p.proxy,  'proxy.ModelSync' ) )
 					delete p.proxy;
-				}
-
-				if ( schema ) {
-					switch ( util.ntype( schema ) ) {
-						case 'array'    : schema = { properties : schema }; // allow fall-through
-						case 'object'   : schema = schema instanceof getClass( 'data.Schema' )
-												 ? schema
-												 : create( 'data.Schema', schema );
-												   break;
-						case 'string'   : schema = getClass( schema );
-						case 'function' : schema = new schema;
-					}
-
-					Model.__schema__ = schema;
-
+				if ( Model.__schema__ = lookupSchema( p.schema, 'data.Schema' ) )
 					delete p.schema;
-				}
 			},
 			beforeinstance : function( Model, instance ) {
 				instance.proxy  = Model.__proxy__;
