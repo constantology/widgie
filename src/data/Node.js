@@ -64,7 +64,7 @@
 					return;
 				}
 
-				var clean, schema = this.schema, prop = schema.prop;
+				var clean, schema = this.schema, prop = schema.property;
 
 				this.raw[key] = val;
 

@@ -1,20 +1,40 @@
 	;!function() {
 		define( namespace( 'data.Schema' ), {
 	// class configuration
+			afterdefine    : function( Schema ) {
+				var p    = Schema.prototype;
+
+				Schema.__mappings__   = p.mappings;
+				Schema.__properties__ = p.properties;
+
+				delete p.mappings; delete p.properties;
+			},
+			beforeinstance : function( Schema, instance, args ) {
+				var has_config = is_obj( args[0] );
+
+				if ( is_obj( Schema.__mappings__ ) ) {
+					instance.mappings   = has_config
+										? util.update( args[0].mappings   || util.obj(), Schema.__mappings__   )
+										: util.update( Schema.__mappings__   );
+					!has_config || delete args[0].mappings;
+				}
+				if ( typeof Schema.__properties__ == 'object' ) {
+					instance.properties = has_config
+										? util.update( args[0].properties || util.obj(), Schema.__properties__ )
+										: util.update( Schema.__properties__ );
+					!has_config || delete args[0].properties;
+				}
+			},
 			constructor : function DataSchema( config ) {
 				if ( is_arr( config ) )
 					config = { properties : config };
 
-				is_obj( config ) || error( {
-					instance : this,
-					method   : 'constructor',
-					message  : 'Invalid data.Schema configuration',
-					name     : error.code.DATA_SCHEMA_CONFIG
-				} );
+				if ( !is_obj( config ) )
+					config = util.obj();
 
-				this.mappings   = util.update( config.mappings || util.obj(), DEFAULT_MAPPINGS );
-				this.properties = config.properties.map( to_property, this );
-				this.prop       = this.properties.reduce( to_prop_map, util.obj() );
+				this.mappings   = util.update( config.mappings || this.mappings || util.obj(), DEFAULT_MAPPINGS );
+				this.properties = ( config.properties || this.properties ).map( to_property, this );
+				this.property   = this.properties.reduce( to_prop_map, util.obj() );
 			},
 			extend      : Object,
 			module      : __lib__,
@@ -23,6 +43,8 @@
 			mappings    : null,
 			properties  : null,
 
+	// public properties
+			property    : null,
 	// public methods
 			coerce      : function( raw, json ) {
 				var items, success, total;
@@ -30,7 +52,7 @@
 				switch ( util.ntype( raw ) ) {
 					case 'array'  : items = raw; success = true; total = items.length; break;
 					case 'object' :
-						items   = this.mappings.items   in raw ? raw[this.mappings.items]   : [];
+						items   = this.getRoot( raw );
 						total   = this.mappings.total   in raw ? raw[this.mappings.total]   : items.length;
 						success = this.mappings.success in raw ? raw[this.mappings.success] : !!total;
 						break;
@@ -45,8 +67,16 @@
 			},
 			coerceItem  : function( raw ) {
 				var data = util.obj();
-				this.properties.invoke( 'process', raw, data );
+				this.properties.invoke( 'process', util.update( this.getItemRoot( raw ) ), data );
 				return data;
+			},
+			getItemRoot : function( raw ) {
+				var item = this.mappings.item;
+				return item && item in raw ? raw[item] : raw;
+			},
+			getRoot     : function( raw ) {
+				var items = this.mappings.items;
+				return items && items in raw ? raw[items] : raw;
 			},
 			toNode      : function( raw ) {
 				return __lib__.data.Node.create( this, raw );
@@ -54,7 +84,7 @@
 			valid       : function( data ) {
 				return Object.keys( data ).every( function( prop ) {
 					return prop in this && this[prop].valid( data[prop] );
-				}, this.prop );
+				}, this.property );
 			}
 		} );
 
@@ -105,6 +135,16 @@
 
 				this.fmt = FORMAT[util.ntype( this.format )] || this.fmt;
 
+				if ( this.schema ) // noinspection FallthroughInSwitchStatementJS
+					switch ( util.ntype( this.schema ) ) {
+						case 'array'    : this.schema = { properties : this.schema }; // allow fall-through
+						case 'object'   : this.schema = this.schema instanceof getClass( 'data.Schema' )
+												 ? this.schema
+												 : create( 'data.Schema', this.schema );
+												   break;
+						case 'string'   : this.schema = getClass( this.schema );      // allow fall-through
+						case 'function' : this.schema = new this.schema;
+					}
 			},
 			extend      : Object,
 			module      : __lib__,
@@ -114,7 +154,7 @@
 			default     : null,
 			format      : null,
 			id          : null,
-			model       : null,
+			schema      : null,
 			type        : 'object',
 
 	// internal properties
@@ -165,6 +205,8 @@
 			},
 			TYPE             = DataSchema.TYPE = { // todo: these may need a lil' more work
 				array   : function( v ) {
+					if ( this.schema )
+						return this.schema.coerce( v );
 					return Array.isArray( v ) ? v : util.exists( v ) ? Array.coerce( v ) : [];
 				},
 				boolean : function( v ) {
@@ -190,6 +232,8 @@
 					return Number( v ) == v ? Number( v ) : this.default;
 				},
 				object  : function( v ) {
+					if ( this.schema )
+						return this.schema.coerceItem( v );
 					return v === UNDEF ? this.default : v;
 				},
 				string  : function( v ) {

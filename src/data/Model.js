@@ -4,34 +4,58 @@
 		return {
 // class configuration
 			afterdefine    : function( Model ) {
-				var p = Model.prototype, schema = p.schema; // noinspection FallthroughInSwitchStatementJS
-				switch ( util.ntype( schema ) ) {
-					case 'array'    : schema = { properties : schema }; // allow fall-through
-					case 'object'   : schema = schema instanceof getClass( 'data.Schema' )
-											 ? schema
-											 : create( 'data.Schema', schema );
-											   break;
-					case 'function' : schema = new Schema;
+				var p = Model.prototype, proxy = p.proxy, schema = p.schema; // noinspection FallthroughInSwitchStatementJS
+
+				if ( proxy ) {
+					switch ( util.ntype( proxy ) ) {
+						case 'object'   : proxy = proxy instanceof getClass( 'proxy.Ajax' )
+												 ? proxy
+												 : create( 'data.ModelSync', proxy );
+												   break;
+						case 'string'   : proxy = getClass( proxy );
+						case 'function' : proxy = new proxy;
+					}
+
+					Model.__proxy__ = proxy;
+
+					delete p.proxy;
 				}
-				Model.__schema__ = schema;
+
+				if ( schema ) {
+					switch ( util.ntype( schema ) ) {
+						case 'array'    : schema = { properties : schema }; // allow fall-through
+						case 'object'   : schema = schema instanceof getClass( 'data.Schema' )
+												 ? schema
+												 : create( 'data.Schema', schema );
+												   break;
+						case 'string'   : schema = getClass( schema );
+						case 'function' : schema = new schema;
+					}
+
+					Model.__schema__ = schema;
+
+					delete p.schema;
+				}
 			},
 			beforeinstance : function( Model, instance ) {
+				instance.proxy  = Model.__proxy__;
 				instance.schema = Model.__schema__;
 			},
 			constructor    : function DataModel( raw ) {
+				this.parent();
+
 				this.changes = util.obj();
 				this.dom     = util.obj();
 				this.raw     = raw;
 				this.src     = this.schema.coerceItem( raw );
 
-				var id       = this.src[schema.mappings.id] || raw[schema.mappings.id];
+				var schema   = this.schema,
+					id       = this.src[schema.mappings.id] || raw[schema.mappings.id];
 				this.exists  = !!id;
 				this.id      = id || 'phantom-' + ( ++count );
 
-				this.setProxy( this.proxy );
-
 				if ( this.exists ) {
-					util.len( this.src ) || this.autoLoad === false || this.sync();
+					( util.len( raw ) - 1 ) || this.autoLoad === false || this.sync();
 					this.set( 'id', id );
 				}
 			},
@@ -127,7 +151,7 @@
 				this.dom[cmp.id] = el.attr( 'data-node-id', this.id );
 			},
 			onSet         : function( key, val, noupdate ) {
-				var change = false, clean, schema = this.schema, prop = schema.prop;
+				var change = false, clean, schema = this.schema, prop = schema.property;
 
 				if ( key in prop ) {
 					clean = prop[key].coerce( val );
@@ -145,33 +169,28 @@
 					this.slc = '[data-id="' + this.id + '"], [data-node-id="' + this.id + '"]';
 				}
 			},
-			setProxy      : function( proxy ) { // noinspection FallthroughInSwitchStatementJS
-				switch ( util.ntype( proxy ) ) {
-					case 'string' : proxy = { urlBase : proxy }; // allow fall-through
-					case 'object' :
-						if ( !( proxy instanceof getClass( 'proxy.Ajax' ) ) )
-							proxy  = create( 'proxy.ModelSync', proxy );
+			onSync        : function( raw, command ) {
+				var data = this.schema.coerceItem( raw );
 
-						this.proxy = proxy;
-						break;
-					default       : ++this.suspendSync;
-				}
+				if ( !is_obj( data ) ) return;
+
+				this.suspendEvents().set( data );
+				Object.keys( data ).forEach( removeChange, this.changes );
+				this.raw = this.schema.getItemRoot( raw );
+				this.resumeEvents().broadcast( 'sync', command );
 			},
-			setSchema     : function( schema ) { // noinspection FallthroughInSwitchStatementJS
-				switch ( util.ntype( schema ) ) {
-					case 'array'  : schema = { properties : schema }; // allow fall-through
-					case 'object' :
-						if ( !( schema instanceof getClass( 'data.Schema' ) ) )
-							schema  = create( 'data.Schema', schema );
-
-						this.schema = schema;
-						break;
-				}
+			onSyncAbort   : function( command ) {
+				this.broadcast( 'sync:abort', command );
+			},
+			onSyncError   : function( err, command ) {
+				this.broadcast( 'sync:error', command, err );
 			},
 			syncView       : function() {
 				Object.reduce( this.dom, syncView, this );
 			}
 		};
+
+		function removeChange( key ) { delete this[key]; }
 
 		function syncData( cmd, proxy, data, status, xhr ) {
 			var id, m = this.schema.mappings;
