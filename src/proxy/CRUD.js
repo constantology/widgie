@@ -9,7 +9,7 @@
 					url    : 'delete'
 				},
 				read   : {
-					method : 'POST',
+					method : 'GET',
 					url    : 'get'
 				},
 				update : {
@@ -38,6 +38,9 @@
 				this.onAPICall( 'update', data, options );
 			},
 // stub overwrite methods
+			createUrl      : function( data, api ) {
+				return api.url || this.urlBase;
+			},
 			onAPICall      : function( command, data, options ) {
 				command = command in this.api ? command : 'read';
 
@@ -49,7 +52,7 @@
 				options.command = command;
 
 				if ( api && this.interactive && this.broadcast( 'before:' + command, data, options ) !== false )
-					this.onLoadStart( api.url, api.method, data = this.prepareData( data, api ), options );
+					this.onLoadStart( this.createUrl( data, api ), api.method, data = this.prepareData( data, api ), options );
 			},
 			onReqAbort     : function( xhr, options ) {
 				this.broadcast( 'abort:' + options.command, xhr, err, options );

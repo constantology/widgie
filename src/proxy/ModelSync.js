@@ -7,32 +7,48 @@
 			api            : null,
 
 // public methods
-			sync           : function( model ) {
-				var cmd = 'read';
+			create         : function( data, options ) {
+				var id = options.model.schema.mappings.id;
+				delete data[id];
+				this.parent( data, options );
+			},
+			delete         : function( data, options ) {
+				var id = options.model.schema.mappings.id;
+				this.parent( { id : data[id] || options.model[id] }, options );
+			},
+			read           : function( data, options ) {
+				var id = options.model.schema.mappings.id;
+				this.parent( { id : data[id] || options.model[id] }, options );
+			},
+			sync           : function( model, options ) {
+				var command = 'read';
 
 				if ( model.dirty )
-					cmd = this.exists ? 'update' : 'create';
+					command = this.exists ? 'update' : 'create';
 
-				!( cmd in this ) || this[cmd]( model );
+				if ( !is_obj( options ) )
+					options = util.obj();
+
+				options.model = model;
+
+				!( command in this.api ) || this[command]( model.toJSON(), options );
 			},
+//			update         : function( data, options ) {
+//			},
 // stub overwrite methods
-			onLoadStart     : function( model ) {
-				this.queue[model.id] = model;
-
+			onReqAbort     : function( xhr, options ) {
+				this.parent( arguments );
+				options.model.onSyncAbort( options.command );
+			},
+			onReqError     : function( xhr, status, err, options ) {
+				this.parent( arguments );
+				options.model.onSyncError( err, options.command );
+			},
+			onReqLoad      : function( data, status, xhr, options ) {
+				this.parent( arguments );
+				options.model.onSync( data, options.command );
 			},
 // internal methods
-			initTransport   : function( model ) {
-				var args      = Array.coerce( arguments, 1 ),
-					transport = this.parent.apply( this, args );
-
-				transport.model = model;
-
-				return transport;
-			},
-// constructor methods
-			init            : function() {
-				this.parent( arguments );
-				this.queue = util.obj();
-			}
+			onBeforeLoad    : function() {}
 		};
 	}() );
