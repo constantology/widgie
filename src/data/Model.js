@@ -236,10 +236,12 @@
 		function toJSON( json, val, key ) {
 			var property = this.schema.property[key];
 
-			if ( property.store )
-				json[key] = val.toJSON();
-			else
-				json[key] = util.merge( val );
+			if ( property && property.stringify !== false ) {
+				if ( property.store )
+					json[key] = val.toJSON();
+				else
+					json[key] = util.merge( val );
+			}
 
 			return json;
 		}

@@ -120,10 +120,15 @@
 			this.broadcast( 'load:start', config );
 		},
 		refreshView     : function( store, options ) {
-			this[is_obj( options ) && options.append === true ? 'append' : 'update']( this.store.toJSON() );
-			this.store.findAll( function( node ) {
-				return !this.has( node.id );
-			}, this.store.view ).invoke( 'getBoundEl', this ).invoke( 'remove' );
+			!this.suspendApply || --this.suspendApply;
+			this.applySelectors();
+			if ( this.store ) {
+				this[is_obj( options ) && options.append === true ? 'append' : 'update']( this.store.toJSON() );
+//				this.replaceCached().updateBindings();
+				this.store.findAll( function( node ) {
+					return !this.has( node.id );
+				}, this.store.view ).invoke( 'getBoundEl', this ).invoke( 'remove' );
+			}
 		},
 		replaceCached   : function() {
 			!this.bound || this[this.updateTarget].find( '.replace-cached' ).map( this._replaceCached, this );
@@ -323,10 +328,10 @@
 		initStore       : function() {
 			var s = this.store;                  // noinspection FallthroughInSwitchStatementJS
 			switch ( util.type( s ) ) {
-				case Name_lc + '-data-store' : break;
+				case Name_lc + '-data-collection' : break;
 				case 'object'                :
 				case 'nullobject'            :
-					this.store = widgie.create( 'data.Store', s );
+					this.store = widgie.create( 'data.Collection', s );
 			}
 		},
 		onAction        : function( action, evt ) {

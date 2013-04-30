@@ -109,7 +109,7 @@
 	function lookupModel( model ) {
 		switch ( util.ntype( model ) ) {
 			case 'string'   : return getClass( model ); break;
-			case 'function' : return model instanceof getClass( 'data.Model' ) ? model : null;
+			case 'function' : return model.prototype instanceof getClass( 'data.Model' ) ? model : null;
 		}
 
 		return null;
@@ -1557,10 +1557,12 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		function toJSON( json, val, key ) {
 			var property = this.schema.property[key];
 
-			if ( property.store )
-				json[key] = val.toJSON();
-			else
-				json[key] = util.merge( val );
+			if ( property && property.stringify !== false ) {
+				if ( property.store )
+					json[key] = val.toJSON();
+				else
+					json[key] = util.merge( val );
+			}
 
 			return json;
 		}
@@ -2421,7 +2423,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				}
 
 				var model = this.onAdd( data );
-				!model || this.onChangeData( silent );
+				!model || this.broadcast( 'add', model ).onChangeData( silent );
 			},
 			bindView      : function( cmp ) {
 				this.data.values.invoke( 'bindView', cmp );
@@ -2533,7 +2535,10 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			remove        : function( model, silent ) {
 				model = this.get( model );
 
-				!model || !this.onRemove( model ) || silent === true || this.onChangeData();
+				if ( !model || !this.onRemove( model ) ) return;
+
+				this.broadcast( 'remove', model );
+				silent === true || this.onChangeData( silent );
 			},
 			readResponse  : function( raw ) {
 				return this.model.__schema__.prepare( raw );
@@ -2641,6 +2646,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				model.observe( {
 					'before:destroy' : 'remove',
 					 change          : 'onChangeData',
+					 sync            : 'onModelSync',
 					 ctx             : this
 				} );
 
@@ -2657,6 +2663,13 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			},
 			onChangeView   : function( silent ) {
 				this.suspendChange || silent === true || this.broadcast( 'change:view' );
+			},
+			onModelSync    : function( model, command ) {
+				if ( command === 'create' ) {
+					var key = this.data.key( model );
+					this.data.remove( key );
+					this.data.set( model.id, model );
+				}
 			},
 			onLoad         : function( proxy, data, status, xhr, config ) {
 				this.broadcast( 'load:complete', data, status, xhr, config ).load( data, config.options );
@@ -3598,10 +3611,15 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			this.broadcast( 'load:start', config );
 		},
 		refreshView     : function( store, options ) {
-			this[is_obj( options ) && options.append === true ? 'append' : 'update']( this.store.toJSON() );
-			this.store.findAll( function( node ) {
-				return !this.has( node.id );
-			}, this.store.view ).invoke( 'getBoundEl', this ).invoke( 'remove' );
+			!this.suspendApply || --this.suspendApply;
+			this.applySelectors();
+			if ( this.store ) {
+				this[is_obj( options ) && options.append === true ? 'append' : 'update']( this.store.toJSON() );
+//				this.replaceCached().updateBindings();
+				this.store.findAll( function( node ) {
+					return !this.has( node.id );
+				}, this.store.view ).invoke( 'getBoundEl', this ).invoke( 'remove' );
+			}
 		},
 		replaceCached   : function() {
 			!this.bound || this[this.updateTarget].find( '.replace-cached' ).map( this._replaceCached, this );
@@ -3801,10 +3819,10 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		initStore       : function() {
 			var s = this.store;                  // noinspection FallthroughInSwitchStatementJS
 			switch ( util.type( s ) ) {
-				case Name_lc + '-data-store' : break;
+				case Name_lc + '-data-collection' : break;
 				case 'object'                :
 				case 'nullobject'            :
-					this.store = widgie.create( 'data.Store', s );
+					this.store = widgie.create( 'data.Collection', s );
 			}
 		},
 		onAction        : function( action, evt ) {

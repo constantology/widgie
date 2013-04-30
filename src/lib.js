@@ -102,7 +102,7 @@
 	function lookupModel( model ) {
 		switch ( util.ntype( model ) ) {
 			case 'string'   : return getClass( model ); break;
-			case 'function' : return model instanceof getClass( 'data.Model' ) ? model : null;
+			case 'function' : return model.prototype instanceof getClass( 'data.Model' ) ? model : null;
 		}
 
 		return null;

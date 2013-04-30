@@ -78,7 +78,7 @@
 				}
 
 				var model = this.onAdd( data );
-				!model || this.onChangeData( silent );
+				!model || this.broadcast( 'add', model ).onChangeData( silent );
 			},
 			bindView      : function( cmp ) {
 				this.data.values.invoke( 'bindView', cmp );
@@ -190,7 +190,10 @@
 			remove        : function( model, silent ) {
 				model = this.get( model );
 
-				!model || !this.onRemove( model ) || silent === true || this.onChangeData();
+				if ( !model || !this.onRemove( model ) ) return;
+
+				this.broadcast( 'remove', model );
+				silent === true || this.onChangeData( silent );
 			},
 			readResponse  : function( raw ) {
 				return this.model.__schema__.prepare( raw );
@@ -298,6 +301,7 @@
 				model.observe( {
 					'before:destroy' : 'remove',
 					 change          : 'onChangeData',
+					 sync            : 'onModelSync',
 					 ctx             : this
 				} );
 
@@ -314,6 +318,13 @@
 			},
 			onChangeView   : function( silent ) {
 				this.suspendChange || silent === true || this.broadcast( 'change:view' );
+			},
+			onModelSync    : function( model, command ) {
+				if ( command === 'create' ) {
+					var key = this.data.key( model );
+					this.data.remove( key );
+					this.data.set( model.id, model );
+				}
 			},
 			onLoad         : function( proxy, data, status, xhr, config ) {
 				this.broadcast( 'load:complete', data, status, xhr, config ).load( data, config.options );
