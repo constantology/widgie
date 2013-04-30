@@ -8,7 +8,7 @@
 
 				if ( Model.__proxy__  = lookupProxy(  p.proxy,  'proxy.ModelSync' ) )
 					delete p.proxy;
-				if ( Model.__schema__ = lookupSchema( p.schema, 'data.Schema' ) )
+				if ( Model.__schema__ = lookupSchema( p.schema ) )
 					delete p.schema;
 			},
 			beforeinstance : function( Model, instance ) {
@@ -32,6 +32,8 @@
 					( util.len( raw ) - 1 ) || this.autoLoad === false || this.sync();
 					this.set( 'id', id );
 				}
+				else if ( util.len( this.src ) > 0 && this.autoSync === true )
+					this.sync();
 			},
 			extend         : 'Observer',
 			module         :  __lib__,
@@ -55,12 +57,22 @@
 			raw            : null,
 			slc            : null,
 			src            : null,
+			strict         : false, // todo: implement this
 			suspendChange  : 0,
 			suspendSync    : 0,
 
 // public methods
+			destroy        : function( success ) {
+				if ( this.autoSync === true ) {
+					if ( success === true )
+						this.parent( arguments );
+					this.proxy.delete( this );
+				}
+				else
+					this.set( 'deleted', true );
+			},
 			get            : function( key ) {
-				return this.src[key];
+				return this.src[key] || null;
 			},
 			getBoundEl     : function( cmp ) {
 				return this.dom[is_str( cmp ) ? cmp : cmp.id] || null;
@@ -96,14 +108,19 @@
 				this.onSet( key, val, noupdate );
 
 				noupdate === true || this.syncView();
+
+				!this.dirty || this.autoSync === false || this.sync();
 			},
 			sync           : function() {
 				if ( this.suspendSync ) return;
 
 				this.proxy.sync( this );
 			},
-			toJSON         : function( extras ) {
-				var json = Object.reduce( this.src, toJSON, util.obj() );
+			toJSON         : function() {
+				if ( this.destroyed )
+					return util.obj();
+
+				var json = Object.reduce( this.src, toJSON.bind( this ), util.obj() );
 
 				if ( this.exists )
 					json.id = this.id;
@@ -122,36 +139,61 @@
 							return;
 				}
 
-				this.dom[cmp.id] = el.attr( 'data-node-id', this.id );
+				this.dom[cmp.id] = el.attr( 'data-model-id', this.id );
+			},
+			onDestroy     : function() {
+				this.parent( arguments );
+				this.destroyed = true;
+				delete this.changes; delete this.dom;
+				delete this.exists;  delete this.id;
+				delete this.raw;     delete this.src;
 			},
 			onSet         : function( key, val, noupdate ) {
-				var change = false, clean, schema = this.schema, prop = schema.property;
+				var change = false, clean,
+					schema = this.schema,
+					prop   = schema.property;
 
 				if ( key in prop ) {
-					clean = prop[key].coerce( val );
-					if ( clean !== this.src[key] ) {
-						this.raw[key]     = val;
-						this.changes[key] = this.src[key];
-						this.src[key]     = clean;
+					if ( prop[key].store ) {
+						this.src[key].load( val );
 						this.suspendChange || this.broadcast( 'change' );
-						this.broadcast( 'change:' + key, this.src[key], this.changes[key] );
+						this.broadcast( 'change:' + key );
+					}
+					else {
+						clean = prop[key].coerce( val );
+						if ( clean !== this.src[key] ) {
+							this.raw[key]     = val;
+							this.changes[key] = this.src[key];
+							this.src[key]     = clean;
+							this.suspendChange || this.broadcast( 'change' );
+							this.broadcast( 'change:' + key, this.src[key], this.changes[key] );
+						}
 					}
 				}
 
 				if ( key === schema.mappings.id ) {
 					this.id  = this.src[key] || val;
-					this.slc = '[data-id="' + this.id + '"], [data-node-id="' + this.id + '"]';
+					this.slc = '[data-id="' + this.id + '"], [data-model-id="' + this.id + '"]';
 				}
 			},
 			onSync        : function( raw, command ) {
-				var data = this.schema.coerceItem( raw );
+				if ( command === 'delete' )
+					return this.destroy( true );
 
-				if ( !is_obj( data ) ) return;
+				raw = this.schema.getItemRoot( raw );
 
-				this.suspendEvents().set( data );
-				Object.keys( data ).forEach( removeChange, this.changes );
-				this.raw = this.schema.getItemRoot( raw );
-				this.resumeEvents().broadcast( 'sync', command );
+				if ( !raw ) return;
+
+//				this.suspendEvents();
+				util.copy( this.src, this.schema.coerceItem( raw ) );
+//				Object.keys( raw ).forEach( removeChange, this.changes );
+				this.raw = raw;
+
+				if ( command === 'create' ) {
+					this.id     = this.src.id;
+					this.exists = !!this.id;
+				}
+				this/*.resumeEvents()*/.broadcast( 'sync', command ).broadcast( 'change' );
 			},
 			onSyncAbort   : function( command ) {
 				this.broadcast( 'sync:abort', command );
@@ -183,20 +225,20 @@
 			}
 		}
 		function syncView( node, el, cmp_id ) {
-			el.attr( 'data-node-id', node.id );
+			el.attr( 'data-model-id', node.id );
 
 			Object.keys( node.changes ).forEach( function( key ) { // we're looping through changed properties to save time
-				el.find( '[data-node-binding="' + key + '"]' ).html( this[key] ); // but we're applying the new values
+				el.find( '[data-model-binding="' + key + '"]' ).html( this[key] ); // but we're applying the new values
 			}, node.src );
 
 			return node;
 		}
 		function toJSON( json, val, key ) {
-//			var prop = this.schema.prop;
+			var property = this.schema.property[key];
 
-//			if ( prop[key] && prop[key].model instanceof getClass( 'data.Model' ) )
-//				json[key] = val.toJSON();
-//			else
+			if ( property.store )
+				json[key] = val.toJSON();
+			else
 				json[key] = util.merge( val );
 
 			return json;

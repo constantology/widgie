@@ -112,8 +112,8 @@
 					abort   : this.onAbort,
 					error   : this.onError,
 					headers : this.headers,
-					method  : method || this.method,
-					options : options,
+					method  : method  || this.method,
+					options : options || util.obj(),
 					success : this.onLoad,
 					url     : url
 				};

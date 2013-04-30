@@ -98,6 +98,15 @@
 		} );
 	}
 
+// todo: make all these static methods #lookup on their respective classes
+	function lookupModel( model ) {
+		switch ( util.ntype( model ) ) {
+			case 'string'   : return getClass( model ); break;
+			case 'function' : return model instanceof getClass( 'data.Model' ) ? model : null;
+		}
+
+		return null;
+	}
 	function lookupProxy( proxy, ProxyClass ) { // noinspection FallthroughInSwitchStatementJS
 		switch ( util.ntype( proxy ) ) {
 			case 'object'   : proxy = proxy instanceof getClass( 'proxy.Ajax' )
@@ -105,7 +114,7 @@
 									 : create( ( ProxyClass || 'proxy.Ajax' ), proxy );
 									   break;
 			case 'string'   : proxy = getClass( proxy ); // allow fall-through
-			case 'function' : proxy = new proxy;
+			case 'function' : proxy = new proxy; break;
 			default         : proxy = null;
 		}
 
@@ -120,11 +129,19 @@
 									 : create( SchemaClass || 'data.Schema', schema );
 									   break;
 			case 'string'   : schema = getClass( schema );      // allow fall-through
-			case 'function' : schema = new schema;
+			case 'function' : schema = new schema; break;
 			default         : schema = null;
 		}
 
 		return schema || null
+	}
+	function lookupStore( store ) {
+		switch ( util.ntype( store ) ) {
+			case 'string'   : return getClass( store ); break;
+			case 'function' : return store instanceof getClass( 'data.Store' ) ? store : null;
+		}
+
+		return null;
 	}
 
 	function register( what, Widgie ) {

@@ -7,7 +7,7 @@
 				  	"util/qs", "util/Gesture", "util/TypedHash", "util/Validate",
 
 				  	"proxy/Ajax", "proxy/CRUD", "proxy/ModelSync",
-				  	"data/Model", "data/Node", "data/Schema", "data/Store",
+				  	"data/Model", "data/Node", "data/Schema", "data/Store", "data/Collection",
 
 				  	"mixins/DataProcessor", "mixins/DataView",
 				  	"mixins/ClsSlc", "mixins/DOMRefs",

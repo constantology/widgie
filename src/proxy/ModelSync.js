@@ -12,9 +12,10 @@
 				delete data[id];
 				this.parent( data, options );
 			},
-			delete         : function( data, options ) {
-				var id = options.model.schema.mappings.id;
-				this.parent( { id : data[id] || options.model[id] }, options );
+			delete         : function( model ) {
+				if ( !model.exists ) return;
+
+				this.parent( { id : model.id }, { model : model } );
 			},
 			read           : function( data, options ) {
 				var id = options.model.schema.mappings.id;
@@ -24,12 +25,14 @@
 				var command = 'read';
 
 				if ( model.dirty )
-					command = this.exists ? 'update' : 'create';
+					command = model.exists ? 'update' : 'create';
+				else if ( !model.exists )
+					command = 'create';
 
 				if ( !is_obj( options ) )
 					options = util.obj();
 
-				options.model = model;
+				options.model = model; // todo, need decorator to add non-existent api methods as public methods to instance
 
 				!( command in this.api ) || this[command]( model.toJSON(), options );
 			},

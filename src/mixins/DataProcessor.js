@@ -23,5 +23,5 @@
 			}
 			return { items : [] };
 		},
-		processItem : function( item ) { return item.src || item; }
+		processItem : function( item ) { return item.toJSON ? item.toJSON() : item.src || item; }
 	} );

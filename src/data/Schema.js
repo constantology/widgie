@@ -47,23 +47,11 @@
 			property    : null,
 	// public methods
 			coerce      : function( raw, json ) {
-				var items, success, total;
+				var data = this.prepare( raw );
+// todo: once model replaces node, make coerce simply return the items array
+				data.items = data.items.map( this[this.json === true || json === true ? 'coerceItem' : 'toNode'], this );
 
-				switch ( util.ntype( raw ) ) {
-					case 'array'  : items = raw; success = true; total = items.length; break;
-					case 'object' :
-						items   = this.getRoot( raw );
-						total   = this.mappings.total   in raw ? raw[this.mappings.total]   : items.length;
-						success = this.mappings.success in raw ? raw[this.mappings.success] : !!total;
-						break;
-					default       : items = []; success = false; total = -1;
-				}
-
-				return {
-					items   : items.map( this[json === true ? 'coerceItem' : 'toNode'], this ),
-					success : success,
-					total   : total
-				};
+				return data;
 			},
 			coerceItem  : function( raw ) {
 				var data = util.obj();
@@ -75,8 +63,32 @@
 				return item && item in raw ? raw[item] : raw;
 			},
 			getRoot     : function( raw ) {
-				var items = this.mappings.items;
-				return items && items in raw ? raw[items] : raw;
+				if ( !raw ) return [];
+
+				var items     = this.mappings.items,
+					raw_items = is_arr( raw ) ? raw : items && items in raw ? raw[items] : raw;
+
+				return is_arr( raw_items ) ? raw_items.slice() : [];
+			},
+			prepare     : function( response ) {
+				var items, success, total;
+
+				if ( response && typeof response == 'object' ) {
+					items   = this.getRoot( response );
+					total   = this.mappings.total   in response ? response[this.mappings.total]   : items.length;
+					success = this.mappings.success in response ? response[this.mappings.success] : !!total;
+				}
+				else {
+					items   = [];
+					total   = -1;
+					success = false;
+				}
+
+				return {
+					items   : items,
+					success : success,
+					total   : total
+				};
 			},
 			toNode      : function( raw ) {
 				return __lib__.data.Node.create( this, raw );
@@ -136,6 +148,8 @@
 				this.fmt = FORMAT[util.ntype( this.format )] || this.fmt;
 
 				this.schema = lookupSchema( this.schema );
+				if ( this.type.id == 'collection' )
+					this.store  = lookupStore( this.store );
 			},
 			extend      : Object,
 			module      : __lib__,
@@ -146,6 +160,7 @@
 			format      : null,
 			id          : null,
 			schema      : null,
+			store       : null,
 			type        : 'object',
 
 	// internal properties
@@ -159,7 +174,7 @@
 				return this.assign( this.coerce( this.val( raw, data ), raw, data ), data );
 			},
 			valid       : function( v ) {
-				return util.ntype( v ) === this.type.id;
+				return this.store ? true : util.ntype( v ) === this.type.id;
 			},
 			value       : util,
 	// internal methods
@@ -197,11 +212,15 @@
 			TYPE             = DataSchema.TYPE = { // todo: these may need a lil' more work
 				array   : function( v ) {
 					if ( this.schema )
-						return this.schema.coerce( v );
+						return this.schema.coerce( v ).items || [];
+
 					return Array.isArray( v ) ? v : util.exists( v ) ? Array.coerce( v ) : [];
 				},
 				boolean : function( v ) {
 					return Boolean.coerce( v );
+				},
+				collection : function( v ) {
+					return this.store.create( { data : v } );
 				},
 				date    : function( v, f ) {
 					if ( is_date( v ) ) return v;
@@ -225,6 +244,7 @@
 				object  : function( v ) {
 					if ( this.schema )
 						return this.schema.coerceItem( v );
+
 					return v === UNDEF ? this.default : v;
 				},
 				string  : function( v ) {
