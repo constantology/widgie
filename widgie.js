@@ -1291,7 +1291,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				if ( !is_obj( options ) )
 					options = util.obj();
 
-				options.model = model;
+				options.model = model; // todo, need decorator to add non-existent api methods as public methods to instance
 
 				!( command in this.api ) || this[command]( model.toJSON(), options );
 			},
@@ -1378,14 +1378,19 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			raw            : null,
 			slc            : null,
 			src            : null,
+			strict         : false, // todo: implement this
 			suspendChange  : 0,
 			suspendSync    : 0,
 
 // public methods
 			destroy        : function( success ) {
-				if ( success === true )
-					this.parent( arguments );
-				this.proxy.delete( this );
+				if ( this.autoSync === true ) {
+					if ( success === true )
+						this.parent( arguments );
+					this.proxy.delete( this );
+				}
+				else
+					this.set( 'deleted', true );
 			},
 			get            : function( key ) {
 				return this.src[key] || null;
