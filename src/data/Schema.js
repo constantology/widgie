@@ -26,7 +26,7 @@
 				}
 			},
 			constructor : function DataSchema( config ) {
-				if ( is_arr( config ) )
+				if ( Array.isArray( config ) )
 					config = { properties : config };
 
 				if ( !is_obj( config ) )
@@ -49,7 +49,7 @@
 			coerce      : function( raw, json ) {
 				var data = this.prepare( raw );
 // todo: once model replaces node, make coerce simply return the items array
-				data.items = data.items.map( this[this.json === true || json === true ? 'coerceItem' : 'toNode'], this );
+				data.items = data.items.map( this.coerceItem, this );
 
 				return data;
 			},
@@ -60,15 +60,15 @@
 			},
 			getItemRoot : function( raw ) {
 				var item = this.mappings.item;
-				return item && item in raw ? raw[item] : raw;
+				return item ? Object.value( raw, item ) || raw : raw;
 			},
 			getRoot     : function( raw ) {
 				if ( !raw ) return [];
 
 				var items     = this.mappings.items,
-					raw_items = is_arr( raw ) ? raw : items && items in raw ? raw[items] : raw;
+					raw_items = Array.isArray( raw ) ? raw : items ? Object.value( raw, items ) || raw : raw;
 
-				return is_arr( raw_items ) ? raw_items.slice() : [];
+				return Array.isArray( raw_items ) ? raw_items.slice() : [];
 			},
 			prepare     : function( response ) {
 				var items, success, total;
@@ -89,9 +89,6 @@
 					success : success,
 					total   : total
 				};
-			},
-			toNode      : function( raw ) {
-				return __lib__.data.Node.create( this, raw );
 			},
 			valid       : function( data ) {
 				return Object.keys( data ).every( function( prop ) {
@@ -120,7 +117,7 @@
 					this.path = this.path.join( '.' );
 				}
 
-				switch ( util.ntype( this.type ) ) {
+				switch ( typeof this.type ) {
 					case 'function' : break;
 					case 'string'   :
 						if ( this.default === null && this.type !== 'object' )
@@ -131,7 +128,7 @@
 						break;
 				}
 
-				is_fun( this.type ) || error( {
+				typeof this.type == 'function' || error( {
 					instance : this,
 					method   : 'constructor',
 					message  : 'Invalid data.Schema.Property#type',
@@ -139,7 +136,7 @@
 				} );
 
 				// noinspection FallthroughInSwitchStatementJS
-				switch ( util.ntype( this.format ) ) {
+				switch ( typeof this.format ) {
 					case 'function' :
 					case 'string'   : break;
 					default         : this.format = util;
@@ -217,7 +214,8 @@
 					return Array.isArray( v ) ? v : util.exists( v ) ? Array.coerce( v ) : [];
 				},
 				boolean : function( v ) {
-					return Boolean.coerce( v );
+					if ( typeof v == 'boolean' ) return v;
+					return v == 'false' ? false : typeof this.default == 'boolean' ? this.default : Boolean.coerce( v );
 				},
 				collection : function( v ) {
 					return this.store.create( { data : v } );
@@ -228,7 +226,7 @@
 					var date; f || ( f = this.format );
 
 					if ( v !== null ) {
-						switch ( util.ntype( f ) ) {
+						switch ( typeof f ) {
 							case 'string'   : date = api.date.coerce( v, f ); break;
 							case 'function' : date = f( v );                  break;
 							default         : date = new Date( v );

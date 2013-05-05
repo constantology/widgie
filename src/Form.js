@@ -130,7 +130,7 @@
 				this.parent( arguments ).initProxy();
 			},
 			initProxy    : function() {
-				if ( is_str( this.proxy ) )
+				if ( typeof this.proxy == 'string' )
 					this.proxy  = { urlBase : this.proxy };
 
 				if ( this.proxy = lookupProxy( this.proxy ) )

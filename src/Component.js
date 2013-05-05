@@ -17,6 +17,7 @@
 		},
 		module          : __lib__,
 // instance configuration
+		autoLoad        :  true,
 		bound           :  null,
 		cls             :  null,
 		clsAnim         : 'w-anim',
@@ -168,7 +169,7 @@
 			 this.broadcast( 'update' ).broadcast( 'change:dom' );
 		},
 		afterTransition : function() {
-			!is_fun( this[this.afterEvent] ) || this[this.afterEvent]();
+			typeof this[this.afterEvent] != 'function' || this[this.afterEvent]();
 			delete this.afterEvent;
 		},
 		onActivate      : function() {
@@ -226,7 +227,7 @@
 			if ( this.store ) {
 				if ( this.store.size )
 					this.once( 'after:render', this.update, this );
-				else
+				else if ( this.autoLoad !== false )
 					this.load();
 			}
 
@@ -328,14 +329,17 @@
 		initStore       : function() {
 			var s = this.store;                  // noinspection FallthroughInSwitchStatementJS
 			switch ( util.type( s ) ) {
-				case Name_lc + '-data-collection' : break;
-				case 'object'                :
-				case 'nullobject'            :
-					this.store = widgie.create( 'data.Collection', s );
+				case 'string'     :
+				case 'function'   :
+					s = lookupStore( s );
+					if ( s ) this.store = new s;
+					break;
+				case 'object'     :
+					this.store = s instanceof getClass( 'data.Collection' ) ? s : widgie.create( 'data.Collection', s );
 			}
 		},
 		onAction        : function( action, evt ) {
-			if ( is_fun( this[action] ) )
+			if ( typeof this[action] == 'function' )
 				this[action]( evt );
 		},
 		syncSize        : function() {}

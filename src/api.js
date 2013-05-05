@@ -91,7 +91,7 @@
 				case 'blob'        :
 				case 'document'    : return req.response;
 				case 'html'        :
-				case 'xml'         : return is_str( req.response ) ? req.responseXML : req.response;
+				case 'xml'         : return typeof req.response == 'string' ? req.responseXML : req.response;
 				case 'text'        :
 				case ''            : return req.responseText;
 			}
@@ -102,21 +102,21 @@
 		function onabort( evt ) {
 			var config = this._config;
 
-			!is_fun( config.abort ) || config.abort( cleanup( this ), config );
+			typeof config.abort != 'function' || config.abort( cleanup( this ), config );
 		}
 
 		function onerror( evt ) {
 			var req    = this,
 				config = req._config;
 
-			!is_fun( config.error ) || config.error( data( req ), req.status, cleanup( req ), config );
+			typeof config.error != 'function' || config.error( data( req ), req.status, cleanup( req ), config );
 		}
 
 		function onload( evt ) {
 			var req    = this,
 				config = req._config;
 
-			!is_fun( config.success ) || config.success( data( req ), req.status, cleanup( req ), config );
+			typeof config.success != 'function' || config.success( data( req ), req.status, cleanup( req ), config );
 		}
 
 		function setHeader( req, val, key ) {

@@ -225,7 +225,7 @@
 			init             : function() {
 				this.parent( arguments );
 
-				if ( is_str( this.el ) )
+				if ( typeof this.el == 'string' )
 					this.el = doc.querySelector( this.el ) || doc.getElementById( this.el ) || null;
 
 				if ( is_dom( this.el ) ) {
@@ -246,7 +246,7 @@
 				this.parent( arguments );
 			},
 			onEnd            : function( evt ) {
-				!is_arr( this.touches ) || this.touches.invoke( 'end' );
+				!Array.isArray( this.touches ) || this.touches.invoke( 'end' );
 
 				var type = this.resolve( evt );
 

@@ -19,7 +19,7 @@
 			if ( arguments.length > 1 && isNaN( arguments[1] ) )
 				item = Array.coerce( arguments );
 
-			if ( is_arr( item ) ) {
+			if ( Array.isArray( item ) ) {
 				this.suspendEvents();
 				item = item.map( this.add, this );
 				this.resumeEvents().broadcast( 'add', item );
@@ -49,12 +49,12 @@
 		},
 		get           : function( item ) {
 //if ( typeof item == 'string' && item.indexOf( 'box' ) > -1 ) debugger;
-			if ( this.items.length )  // noinspection FallthroughInSwitchStatementJS
+			if ( item !== null && item !== UNDEF && this.items.length )  // noinspection FallthroughInSwitchStatementJS
 				switch ( util.type( item ) ) {
 					case 'event'     : item = item.currentTarget;                          // allow fall-through
 					case 'element[]' : case 'htmlelement' : item = api.$( item ).data( 'id' ); // allow fall-through
 					case 'number'    : case 'string'      : return this.items[item] || this.map[item] || this.map[this.id + '-' + item] || null;
-					default          : return util.got( item, 'id', 'cmpId' ) ? this.get( item.id ) || this.get( this.id + '-' + item.cmpId ) : null;
+					default          : return 'id' in item || 'cmpId' in item ? this.get( item.id ) || this.get( this.id + '-' + item.cmpId ) : null;
 				}
 			return null;
 		},
@@ -164,7 +164,7 @@
 			}
 		},
 		lookup        : function( item ) {
-			if ( is_str( item ) )
+			if ( typeof item == 'string' )
 				item = Mgr.get( item );
 
 			if ( is_obj( item ) && !item.id && item.cmpId )
@@ -184,7 +184,7 @@
 		onLoadItems   : function( append, items ) {
 			append === true || this.clear( true );
 
-			!( !is_arr( items ) || !is_obj( items ) ) || this.add( items );
+			!( !Array.isArray( items ) || !is_obj( items ) ) || this.add( items );
 
 			this.broadcast( 'load:items:complete' );
 		}

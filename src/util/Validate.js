@@ -54,5 +54,5 @@
 			}
 		}
 	} }, 'cw' );
-	__lib__.Validate.radio    = __lib__.Validate.checkbox;
-	__lib__.Validate.password = __lib__.Validate.text;
+	__lib__.Validate.radio = __lib__.Validate.checkbox;
+	__lib__.Validate.email = __lib__.Validate.file = __lib__.Validate.number = __lib__.Validate.password = __lib__.Validate.text;

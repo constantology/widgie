@@ -50,7 +50,7 @@
 				default                      : return null;
 			}
 
-			if ( is_str( html ) )
+			if ( typeof html == 'string' )
 				html = html.trim();
 
 			return this.fragmentalize( html ? html : '' );
@@ -62,7 +62,7 @@
 		afterRender     : function() {
 			 this.broadcast( 'after:render' );
 
-			!is_bool( this.active ) || this[( this.active === true ? '' : 'de' ) + 'activate']();
+			typeof this.active != 'boolean' || this[( this.active === true ? '' : 'de' ) + 'activate']();
 
 			if ( this.focusable !== false ) {
 				addDOMListener( this.$elFocus, 'blur',  this.id + '::blur' );

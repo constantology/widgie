@@ -2,7 +2,7 @@
 		return {
 			constructor : function CustomError( config ) {
 				if ( !is_obj( config ) )
-					config = is_str( config ) ? { message : config } : {};
+					config = typeof config == 'string' ? { message : config } : {};
 
 				util.copy( this, config );
 
@@ -13,8 +13,8 @@
 			name        : capitalize( Name ) + 'Error',
 			toString    : function() { return this.message; },
 			trace       : Error.caputureStackTrace ? function() { //noinspection FallthroughInSwitchStatementJS
-				switch ( util.ntype( this.method ) ) {
-					case 'string'   : if ( !this.cmp || !is_fun( this.cmp[this.method] ) ) break;
+				switch ( typeof this.method ) {
+					case 'string'   : if ( !this.cmp || typeof this.cmp[this.method] != 'function' ) break;
 									  this.method = this.cmp[this.method];
 					case 'function' : Error.captureStackTrace( this, this.method );        break;
 				}
@@ -23,7 +23,7 @@
 	}() );
 
 	function error( e ) {
-		if ( util.got( e, 'type' ) ) {
+		if ( 'type' in Object( e ) ) {
 			if ( util.has( error.code, e.type ) )
 				e.name = error.code[e.type];
 			delete e.type;

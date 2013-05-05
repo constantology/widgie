@@ -166,3 +166,5 @@
 			}
 		};
 	}() );
+
+	util.def( __lib__.proxy, 'lookup', lookupProxy, 'r' );

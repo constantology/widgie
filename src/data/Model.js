@@ -25,6 +25,7 @@
 
 				var schema   = this.schema,
 					id       = this.src[schema.mappings.id] || raw[schema.mappings.id];
+
 				this.exists  = !!id;
 				this.id      = id || 'phantom-' + ( ++count );
 
@@ -72,13 +73,13 @@
 					this.set( 'deleted', true );
 			},
 			get            : function( key ) {
-				return this.src[key] || null;
+				return this.src[key] === UNDEF ? null : this.src[key];
 			},
 			getBoundEl     : function( cmp ) {
-				return this.dom[is_str( cmp ) ? cmp : cmp.id] || null;
+				return this.dom[typeof cmp == 'string' ? cmp : cmp.id] || null;
 			},
 			revert         : function( key ) {
-				if ( !is_str( key ) ) {
+				if ( typeof key != 'string' ) {
 					Object.keys( this.changes ).forEach( this.revert, this );
 					return;
 				}
@@ -89,7 +90,7 @@
 			},
 			set            : function( key, val, noupdate ) {
 				if ( is_obj( key ) ) {
-					if ( is_bool( val ) )
+					if ( typeof val == 'boolean' )
 						noupdate = val;
 
 					this.suspendChange || ++this.suspendChange;
@@ -177,23 +178,25 @@
 				}
 			},
 			onSync        : function( raw, command ) {
+				if ( !raw ) return; // todo: throw an error?
+
 				if ( command === 'delete' )
 					return this.destroy( true );
 
-				raw = this.schema.getItemRoot( raw );
+				var raw_item = this.schema.getItemRoot( raw );
 
-				if ( !raw ) return;
+				if ( !raw_item ) return;
 
 //				this.suspendEvents();
-				util.copy( this.src, this.schema.coerceItem( raw ) );
+				util.copy( this.src, this.schema.coerceItem( raw_item ) );
 //				Object.keys( raw ).forEach( removeChange, this.changes );
-				this.raw = raw;
+				this.raw = raw_item;
 
 				if ( command === 'create' ) {
 					this.id     = this.src.id;
 					this.exists = !!this.id;
 				}
-				this/*.resumeEvents()*/.broadcast( 'sync', command ).broadcast( 'change' );
+				this/*.resumeEvents()*/.broadcast( 'sync', command, raw ).broadcast( 'change' );
 			},
 			onSyncAbort   : function( command ) {
 				this.broadcast( 'sync:abort', command );

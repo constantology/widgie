@@ -41,7 +41,7 @@
 			what = how.widgie || how.type;
 		}
 
-		if ( !is_str( what ) )
+		if ( typeof what != 'string' )
 			what = 'widgie.Component';
 
 		var Widgie = getClass( what ) || __lib__.Component;
@@ -50,13 +50,13 @@
 	}
 
 	function define( what, how ) {
-		if ( is_obj( what ) || is_fun( what ) ) {
+		if ( is_obj( what ) || typeof what == 'function' ) {
 			how  = what;
-			if ( is_fun( how ) )
+			if ( typeof how == 'function' )
 				how = how();
 		}
 
-		if ( !is_str( what ) ) {
+		if ( typeof what != 'string' ) {
 			what = how.namespace || capitalize( how.type );
 			delete how.namespace;
 		}
@@ -100,7 +100,7 @@
 
 // todo: make all these static methods #lookup on their respective classes
 	function lookupModel( model ) {
-		switch ( util.ntype( model ) ) {
+		switch ( typeof model ) {
 			case 'string'   : return getClass( model ); break;
 			case 'function' : return model.prototype instanceof getClass( 'data.Model' ) ? model : null;
 		}
@@ -136,7 +136,7 @@
 		return schema || null
 	}
 	function lookupStore( store ) {
-		switch ( util.ntype( store ) ) {
+		switch ( typeof store ) {
 			case 'string'   : return getClass( store ); break;
 			case 'function' : return store instanceof getClass( 'data.Store' ) ? store : null;
 		}
@@ -151,7 +151,7 @@
 		if ( i === 0 || i === 1 )
 			internal = what.split( '.' ).slice( 1 ).join( '.' );
 
-		if ( is_str( internal ) )
+		if ( typeof internal == 'string' )
 			widgies[internal.toLowerCase().split( '.' ).join( '-' )] = widgies[internal] = Widgie;
 
 		return Widgie;
@@ -179,7 +179,7 @@
 
 		var actions = el.getAttribute( 'data-' + evt.type );
 
-		if ( !is_str( actions ) ) return;
+		if ( typeof actions != 'string' ) return;
 
 		actions.split( '|' ).forEach( function( action ) {
 			var cmp; action = action.split( '::' );

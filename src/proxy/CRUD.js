@@ -25,18 +25,10 @@
 			api            : null,
 
 // public methods
-			create         : function( data, options ) {
-				this.onAPICall( 'create', data, options );
-			},
-			delete         : function( data, options ) {
-				this.onAPICall( 'delete', data, options );
-			},
-			read           : function( data, options ) {
-				this.onAPICall( 'read', data, options );
-			},
-			update         : function( data, options ) {
-				this.onAPICall( 'update', data, options );
-			},
+			create         : createAPIMethod( 'create' ),
+			delete         : createAPIMethod( 'delete' ),
+			read           : createAPIMethod( 'read'   ),
+			update         : createAPIMethod( 'update' ),
 // stub overwrite methods
 			createUrl      : function( data, api ) {
 				return api.url || this.urlBase;
@@ -65,7 +57,7 @@
 			},
 // internal methods
 			prepareData     : function( data, api ) {
-				return is_fun( api.data ) ? api.data( data ) : data;
+				return typeof api.data == 'function' ? api.data( data ) : data;
 			},
 // constructor methods
 			init            : function() {
@@ -75,24 +67,29 @@
 				if ( !is_obj( this.api ) )
 					this.api = util.obj();
 
-				Object.reduce( default_api, this.initAPIMethod, this );
+				Object.reduce( this.api, this.initAPIMethod, this );
 			},
 			initAPIMethod   : function( ctx, config, command ) {
-				var api = ctx.api, cmd;
+				var cmd = default_api[command];
 
-				if ( command in api ) {
-					cmd = api[command];
+				if ( typeof config == 'string' )
+					config = { url : config };
 
-					if ( is_str( cmd ) )
-						cmd = { url : cmd };
+				if ( typeof ctx.urlBase == 'string' && typeof config.url == 'string' )
+					config.url = ctx.urlBase + ( config.url.indexOf( '/' ) === 0 ? '' : '/' ) + config.url;
 
-					if ( is_str( ctx.urlBase ) && is_str( cmd.url ) )
-						cmd.url = ctx.urlBase + ( cmd.url.indexOf( '/' ) === 0 ? '' : '/' ) + cmd.url;
+				ctx.api[command] = util.update( config, cmd );
 
-					api[command] = util.update( cmd, config );
-				}
+				if ( typeof ctx[command] != 'function' )
+					ctx[command] = createAPIMethod( command );
 
 				return ctx;
 			}
 		};
+
+		function createAPIMethod( command ) {
+			return function APIMethod( model, options ) {
+				return this.onAPICall( command, model, options );
+			};
+		}
 	}() );

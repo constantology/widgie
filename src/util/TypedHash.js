@@ -6,7 +6,7 @@
 					config = {};
 
 				if ( util.got( config, 'Type', 'data', 'propId' ) ) {
-					this.Type   = is_fun( config.Type ) ? config.Type : lib.get( config.Type ) || Object;
+					this.Type   = typeof config.Type == 'function' ? config.Type : lib.get( config.Type ) || Object;
 					this.propId = config.propId || 'id';
 					data        = config.data;
 				}
@@ -29,12 +29,12 @@
 			get         : function( id ) {
 				if ( !util.exists( id ) )
 					return null;
-				if ( !is_str( id ) )
+				if ( typeof id != 'string' )
 					id = id[this.propId];
 				return this.parent( id );
 			},
 			has         : function( id ) {
-				if ( !is_str( id ) )
+				if ( typeof id != 'string' )
 					id = id[this.propId];
 				return this.parent( id );
 			},

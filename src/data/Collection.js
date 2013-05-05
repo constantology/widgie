@@ -70,7 +70,7 @@
 
 // public methods
 			add           : function( data, silent ) {
-				if ( is_arr( data ) ) {
+				if ( Array.isArray( data ) ) {
 					 this.suspendChange || ++this.suspendChange;
 					 data.forEach( this.add, this );
 					!this.suspendChange || --this.suspendChange;
@@ -164,7 +164,7 @@
 				var data = this.readResponse( raw );
 
 				if ( data.success && data.items ) {
-					this.add( data.items, !!options );
+					this.clearFilters( true ).add( data.items, !!options );
 					!options || this.onChangeData( false, options );
 				}
 				else
@@ -176,6 +176,9 @@
 			next          : function( model ) {
 				var i = this.indexOf( model, true );
 				return !!~i ? this.view.ovalues[i + 1] || null : null;
+			},
+			pluck         : function( key ) {
+				return this.view.values.invoke( 'get', key );
 			},
 			prev          : function( model ) {
 				var i = this.indexOf( model, true );
@@ -208,7 +211,7 @@
 					return;
 				}
 
-				if ( is_bool( model ) )
+				if ( typeof model == 'boolean' )
 					silent = model;
 
 				model = this.changes;
@@ -232,7 +235,7 @@
 					delete this.proxy;
 				}
 
-				if ( is_str( proxy ) )
+				if ( typeof proxy == 'string' )
 					proxy = lookupProxy( proxy ) || { urlBase : proxy };
 
 				if ( this.proxy = lookupProxy( proxy ) ) {
@@ -383,3 +386,9 @@
 			} );
 		}
 	}() );
+
+	util.def( __lib__.data, 'lookup', { value : {
+		collection : lookupStore,
+		model      : lookupModel,
+		schema     : lookupSchema
+	} }, 'r' );

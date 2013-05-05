@@ -48,7 +48,7 @@
 			what = how.widgie || how.type;
 		}
 
-		if ( !is_str( what ) )
+		if ( typeof what != 'string' )
 			what = 'widgie.Component';
 
 		var Widgie = getClass( what ) || __lib__.Component;
@@ -57,13 +57,13 @@
 	}
 
 	function define( what, how ) {
-		if ( is_obj( what ) || is_fun( what ) ) {
+		if ( is_obj( what ) || typeof what == 'function' ) {
 			how  = what;
-			if ( is_fun( how ) )
+			if ( typeof how == 'function' )
 				how = how();
 		}
 
-		if ( !is_str( what ) ) {
+		if ( typeof what != 'string' ) {
 			what = how.namespace || capitalize( how.type );
 			delete how.namespace;
 		}
@@ -107,7 +107,7 @@
 
 // todo: make all these static methods #lookup on their respective classes
 	function lookupModel( model ) {
-		switch ( util.ntype( model ) ) {
+		switch ( typeof model ) {
 			case 'string'   : return getClass( model ); break;
 			case 'function' : return model.prototype instanceof getClass( 'data.Model' ) ? model : null;
 		}
@@ -143,7 +143,7 @@
 		return schema || null
 	}
 	function lookupStore( store ) {
-		switch ( util.ntype( store ) ) {
+		switch ( typeof store ) {
 			case 'string'   : return getClass( store ); break;
 			case 'function' : return store instanceof getClass( 'data.Store' ) ? store : null;
 		}
@@ -158,7 +158,7 @@
 		if ( i === 0 || i === 1 )
 			internal = what.split( '.' ).slice( 1 ).join( '.' );
 
-		if ( is_str( internal ) )
+		if ( typeof internal == 'string' )
 			widgies[internal.toLowerCase().split( '.' ).join( '-' )] = widgies[internal] = Widgie;
 
 		return Widgie;
@@ -186,7 +186,7 @@
 
 		var actions = el.getAttribute( 'data-' + evt.type );
 
-		if ( !is_str( actions ) ) return;
+		if ( typeof actions != 'string' ) return;
 
 		actions.split( '|' ).forEach( function( action ) {
 			var cmp; action = action.split( '::' );
@@ -224,16 +224,12 @@
 		return str.charAt( 0 ).toUpperCase() + str.substring( 1 );
 	}
 
-	function is_arr( item )  { return Array.isArray( item ); }
-	function is_bool( item ) { return util.ntype( item ) == 'boolean'; }
 	function is_date( item ) { return util.ntype( item ) == 'date'; }
 	function is_dom( item )  { return util.type( item )  == 'htmlelement'; }
 	function is_el( item )   { return util.ntype( item ) == 'element[]'; }
 	function is_evt( item )  { return util.ntype( item ) == 'event'; }
-	function is_fun( item )  { return util.ntype( item ) == 'function'; }
 	function is_obj( item )  { return util.ntype( item ) == 'object'; }
-	function is_num( item )  { return util.type( item )  == 'number'; }
-	function is_str( item )  { return util.ntype( item ) == 'string'; }
+	function is_num( item )  { return typeof item == 'number' && !isNaN( item ); }
 	function is_true( v )    { return v === true; }
 
 	function namespace( ClassName ) { return '^' + Name + '.' + ClassName; }
@@ -340,7 +336,7 @@
 				case 'blob'        :
 				case 'document'    : return req.response;
 				case 'html'        :
-				case 'xml'         : return is_str( req.response ) ? req.responseXML : req.response;
+				case 'xml'         : return typeof req.response == 'string' ? req.responseXML : req.response;
 				case 'text'        :
 				case ''            : return req.responseText;
 			}
@@ -351,21 +347,21 @@
 		function onabort( evt ) {
 			var config = this._config;
 
-			!is_fun( config.abort ) || config.abort( cleanup( this ), config );
+			typeof config.abort != 'function' || config.abort( cleanup( this ), config );
 		}
 
 		function onerror( evt ) {
 			var req    = this,
 				config = req._config;
 
-			!is_fun( config.error ) || config.error( data( req ), req.status, cleanup( req ), config );
+			typeof config.error != 'function' || config.error( data( req ), req.status, cleanup( req ), config );
 		}
 
 		function onload( evt ) {
 			var req    = this,
 				config = req._config;
 
-			!is_fun( config.success ) || config.success( data( req ), req.status, cleanup( req ), config );
+			typeof config.success != 'function' || config.success( data( req ), req.status, cleanup( req ), config );
 		}
 
 		function setHeader( req, val, key ) {
@@ -741,7 +737,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			init             : function() {
 				this.parent( arguments );
 
-				if ( is_str( this.el ) )
+				if ( typeof this.el == 'string' )
 					this.el = doc.querySelector( this.el ) || doc.getElementById( this.el ) || null;
 
 				if ( is_dom( this.el ) ) {
@@ -762,7 +758,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				this.parent( arguments );
 			},
 			onEnd            : function( evt ) {
-				!is_arr( this.touches ) || this.touches.invoke( 'end' );
+				!Array.isArray( this.touches ) || this.touches.invoke( 'end' );
 
 				var type = this.resolve( evt );
 
@@ -870,7 +866,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 					config = {};
 
 				if ( util.got( config, 'Type', 'data', 'propId' ) ) {
-					this.Type   = is_fun( config.Type ) ? config.Type : lib.get( config.Type ) || Object;
+					this.Type   = typeof config.Type == 'function' ? config.Type : lib.get( config.Type ) || Object;
 					this.propId = config.propId || 'id';
 					data        = config.data;
 				}
@@ -893,12 +889,12 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			get         : function( id ) {
 				if ( !util.exists( id ) )
 					return null;
-				if ( !is_str( id ) )
+				if ( typeof id != 'string' )
 					id = id[this.propId];
 				return this.parent( id );
 			},
 			has         : function( id ) {
-				if ( !is_str( id ) )
+				if ( typeof id != 'string' )
 					id = id[this.propId];
 				return this.parent( id );
 			},
@@ -974,8 +970,8 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			}
 		}
 	} }, 'cw' );
-	__lib__.Validate.radio    = __lib__.Validate.checkbox;
-	__lib__.Validate.password = __lib__.Validate.text;
+	__lib__.Validate.radio = __lib__.Validate.checkbox;
+	__lib__.Validate.email = __lib__.Validate.file = __lib__.Validate.number = __lib__.Validate.password = __lib__.Validate.text;
 
 
 
@@ -1150,6 +1146,8 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		};
 	}() );
 
+	util.def( __lib__.proxy, 'lookup', lookupProxy, 'r' );
+
 
 
 /*~  src/proxy/CRUD.js  ~*/
@@ -1181,18 +1179,10 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			api            : null,
 
 // public methods
-			create         : function( data, options ) {
-				this.onAPICall( 'create', data, options );
-			},
-			delete         : function( data, options ) {
-				this.onAPICall( 'delete', data, options );
-			},
-			read           : function( data, options ) {
-				this.onAPICall( 'read', data, options );
-			},
-			update         : function( data, options ) {
-				this.onAPICall( 'update', data, options );
-			},
+			create         : createAPIMethod( 'create' ),
+			delete         : createAPIMethod( 'delete' ),
+			read           : createAPIMethod( 'read'   ),
+			update         : createAPIMethod( 'update' ),
 // stub overwrite methods
 			createUrl      : function( data, api ) {
 				return api.url || this.urlBase;
@@ -1221,7 +1211,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			},
 // internal methods
 			prepareData     : function( data, api ) {
-				return is_fun( api.data ) ? api.data( data ) : data;
+				return typeof api.data == 'function' ? api.data( data ) : data;
 			},
 // constructor methods
 			init            : function() {
@@ -1231,26 +1221,31 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				if ( !is_obj( this.api ) )
 					this.api = util.obj();
 
-				Object.reduce( default_api, this.initAPIMethod, this );
+				Object.reduce( this.api, this.initAPIMethod, this );
 			},
 			initAPIMethod   : function( ctx, config, command ) {
-				var api = ctx.api, cmd;
+				var cmd = default_api[command];
 
-				if ( command in api ) {
-					cmd = api[command];
+				if ( typeof config == 'string' )
+					config = { url : config };
 
-					if ( is_str( cmd ) )
-						cmd = { url : cmd };
+				if ( typeof ctx.urlBase == 'string' && typeof config.url == 'string' )
+					config.url = ctx.urlBase + ( config.url.indexOf( '/' ) === 0 ? '' : '/' ) + config.url;
 
-					if ( is_str( ctx.urlBase ) && is_str( cmd.url ) )
-						cmd.url = ctx.urlBase + ( cmd.url.indexOf( '/' ) === 0 ? '' : '/' ) + cmd.url;
+				ctx.api[command] = util.update( config, cmd );
 
-					api[command] = util.update( cmd, config );
-				}
+				if ( typeof ctx[command] != 'function' )
+					ctx[command] = createAPIMethod( command );
 
 				return ctx;
 			}
 		};
+
+		function createAPIMethod( command ) {
+			return function APIMethod( model, options ) {
+				return this.onAPICall( command, model, options );
+			};
+		}
 	}() );
 
 
@@ -1346,6 +1341,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 
 				var schema   = this.schema,
 					id       = this.src[schema.mappings.id] || raw[schema.mappings.id];
+
 				this.exists  = !!id;
 				this.id      = id || 'phantom-' + ( ++count );
 
@@ -1393,13 +1389,13 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 					this.set( 'deleted', true );
 			},
 			get            : function( key ) {
-				return this.src[key] || null;
+				return this.src[key] === UNDEF ? null : this.src[key];
 			},
 			getBoundEl     : function( cmp ) {
-				return this.dom[is_str( cmp ) ? cmp : cmp.id] || null;
+				return this.dom[typeof cmp == 'string' ? cmp : cmp.id] || null;
 			},
 			revert         : function( key ) {
-				if ( !is_str( key ) ) {
+				if ( typeof key != 'string' ) {
 					Object.keys( this.changes ).forEach( this.revert, this );
 					return;
 				}
@@ -1410,7 +1406,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			},
 			set            : function( key, val, noupdate ) {
 				if ( is_obj( key ) ) {
-					if ( is_bool( val ) )
+					if ( typeof val == 'boolean' )
 						noupdate = val;
 
 					this.suspendChange || ++this.suspendChange;
@@ -1498,23 +1494,25 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				}
 			},
 			onSync        : function( raw, command ) {
+				if ( !raw ) return; // todo: throw an error?
+
 				if ( command === 'delete' )
 					return this.destroy( true );
 
-				raw = this.schema.getItemRoot( raw );
+				var raw_item = this.schema.getItemRoot( raw );
 
-				if ( !raw ) return;
+				if ( !raw_item ) return;
 
 //				this.suspendEvents();
-				util.copy( this.src, this.schema.coerceItem( raw ) );
+				util.copy( this.src, this.schema.coerceItem( raw_item ) );
 //				Object.keys( raw ).forEach( removeChange, this.changes );
-				this.raw = raw;
+				this.raw = raw_item;
 
 				if ( command === 'create' ) {
 					this.id     = this.src.id;
 					this.exists = !!this.id;
 				}
-				this/*.resumeEvents()*/.broadcast( 'sync', command ).broadcast( 'change' );
+				this/*.resumeEvents()*/.broadcast( 'sync', command, raw ).broadcast( 'change' );
 			},
 			onSyncAbort   : function( command ) {
 				this.broadcast( 'sync:abort', command );
@@ -1570,138 +1568,6 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 
 
 
-/*~  src/data/Node.js  ~*/
-
-	define( namespace( 'data.Node' ), function() {
-		var count = 999;
-
-		return {
-// class configuration
-			constructor : function DataNode( schema, raw ) {
-				this.changes = util.obj();
-				this.dom     = util.obj();
-				this.raw     = raw;
-				this.schema  = schema;
-				this.src     = schema.coerceItem( raw );
-				var id       = this.src[schema.mappings.id] || raw[schema.mappings.id];
-				this.exists  = !!id;
-				this.set( 'id', id );
-			},
-			extend      : Object,
-			module      : __lib__,
-
-// accessors
-			dirty       : {
-				get     : function() { return !!util.len( this.changes ); },
-				set     : function() { return this.dirty; }
-			},
-
-// public properties
-			changes     : null,
-			id          : null,
-// internal properties
-			dom         : null,
-			exists      : false,
-			raw         : null,
-			schema      : null,
-			slc         : null,
-			src         : null,
-
-// public methods
-			get         : function( key ) {
-				return this.src[key];
-			},
-			getBoundEl  : function( cmp ) {
-				return this.dom[is_str( cmp ) ? cmp : cmp.id] || null;
-			},
-			revert      : function( key ) {
-				if ( !is_str( key ) ) {
-					Object.keys( this.changes ).forEach( this.revert, this );
-					return;
-				}
-				if ( key in this.changes ) {
-					this.set( key, this.changes[key] );
-					delete this.changes[key];
-				}
-			},
-			set         : function( key, val, noupdate ) {
-				if ( is_obj( key ) ) {
-					if ( is_bool( val ) )
-						noupdate = val;
-
-					Object.reduce( key, function( ctx, v, k ) {
-						return ctx.set( k, v, true );
-					}, this );
-
-					noupdate === true || this.syncView();
-
-					return;
-				}
-
-				var clean, schema = this.schema, prop = schema.property;
-
-				this.raw[key] = val;
-
-				if ( key in prop ) {
-					clean = prop[key].coerce( val );
-					if ( clean !== this.src[key] ) {
-						this.changes[key] = this.src[key];
-						this.src[key]     = clean;
-					}
-				}
-
-				if ( key === schema.mappings.id ) {
-					this.id  = this.src[key] || val;
-					this.slc = '[data-id="' + this.id + '"], [data-node-id="' + this.id + '"]';
-				}
-
-				noupdate === true || this.syncView();
-			},
-			toJSON         : function( extras ) {
-				var json = Object.reduce( this.src, toJSON, util.obj() );
-
-				if ( this.exists )
-					json.id = this.id;
-				else
-					delete json.id;
-
-				return json;
-			},
-// internal methods
-			bindView    : function( cmp, el ) {
-				switch ( util.type( el ) ) {
-					case 'element[]'   :                   break;
-					case 'htmlelement' : el = api.$( el ); break;
-					default            :
-						if ( !( el = cmp.$el.find( this.slc ) ).size )
-							return;
-				}
-
-				this.dom[cmp.id] = el.attr( 'data-node-id', this.id );
-			},
-			syncView    : function() {
-				Object.reduce( this.dom, syncView, this );
-			}
-		};
-
-		function syncView( node, el, cmp_id ) {
-			el.attr( 'data-node-id', node.id );
-
-			Object.keys( node.changes ).forEach( function( key ) { // we're looping through changed properties to save time
-				el.find( '[data-node-binding="' + key + '"]' ).html( this[key] ); // but we're applying the new values
-			}, node.src );
-
-			return node;
-		}
-		function toJSON( json, val, key ) {
-			json[key] = util.merge( val );
-
-			return json;
-		}
-	}() );
-
-
-
 /*~  src/data/Schema.js  ~*/
 
 	;!function() {
@@ -1732,7 +1598,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				}
 			},
 			constructor : function DataSchema( config ) {
-				if ( is_arr( config ) )
+				if ( Array.isArray( config ) )
 					config = { properties : config };
 
 				if ( !is_obj( config ) )
@@ -1755,7 +1621,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			coerce      : function( raw, json ) {
 				var data = this.prepare( raw );
 // todo: once model replaces node, make coerce simply return the items array
-				data.items = data.items.map( this[this.json === true || json === true ? 'coerceItem' : 'toNode'], this );
+				data.items = data.items.map( this.coerceItem, this );
 
 				return data;
 			},
@@ -1766,15 +1632,15 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			},
 			getItemRoot : function( raw ) {
 				var item = this.mappings.item;
-				return item && item in raw ? raw[item] : raw;
+				return item ? Object.value( raw, item ) || raw : raw;
 			},
 			getRoot     : function( raw ) {
 				if ( !raw ) return [];
 
 				var items     = this.mappings.items,
-					raw_items = is_arr( raw ) ? raw : items && items in raw ? raw[items] : raw;
+					raw_items = Array.isArray( raw ) ? raw : items ? Object.value( raw, items ) || raw : raw;
 
-				return is_arr( raw_items ) ? raw_items.slice() : [];
+				return Array.isArray( raw_items ) ? raw_items.slice() : [];
 			},
 			prepare     : function( response ) {
 				var items, success, total;
@@ -1795,9 +1661,6 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 					success : success,
 					total   : total
 				};
-			},
-			toNode      : function( raw ) {
-				return __lib__.data.Node.create( this, raw );
 			},
 			valid       : function( data ) {
 				return Object.keys( data ).every( function( prop ) {
@@ -1826,7 +1689,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 					this.path = this.path.join( '.' );
 				}
 
-				switch ( util.ntype( this.type ) ) {
+				switch ( typeof this.type ) {
 					case 'function' : break;
 					case 'string'   :
 						if ( this.default === null && this.type !== 'object' )
@@ -1837,7 +1700,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 						break;
 				}
 
-				is_fun( this.type ) || error( {
+				typeof this.type == 'function' || error( {
 					instance : this,
 					method   : 'constructor',
 					message  : 'Invalid data.Schema.Property#type',
@@ -1845,7 +1708,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				} );
 
 				// noinspection FallthroughInSwitchStatementJS
-				switch ( util.ntype( this.format ) ) {
+				switch ( typeof this.format ) {
 					case 'function' :
 					case 'string'   : break;
 					default         : this.format = util;
@@ -1923,7 +1786,8 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 					return Array.isArray( v ) ? v : util.exists( v ) ? Array.coerce( v ) : [];
 				},
 				boolean : function( v ) {
-					return Boolean.coerce( v );
+					if ( typeof v == 'boolean' ) return v;
+					return v == 'false' ? false : typeof this.default == 'boolean' ? this.default : Boolean.coerce( v );
 				},
 				collection : function( v ) {
 					return this.store.create( { data : v } );
@@ -1934,7 +1798,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 					var date; f || ( f = this.format );
 
 					if ( v !== null ) {
-						switch ( util.ntype( f ) ) {
+						switch ( typeof f ) {
 							case 'string'   : date = api.date.coerce( v, f ); break;
 							case 'function' : date = f( v );                  break;
 							default         : date = new Date( v );
@@ -1970,374 +1834,6 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			return property instanceof DataSchema.Property ? property : widgie.create( 'data.Schema.Property', property );
 		}
 	}();
-
-
-
-/*~  src/data/Store.js  ~*/
-
-	define( namespace( 'data.Store' ), function() {
-		var DataNode = getClass( 'data.Node' ),
-			count    = 999,
-			filters  = {
-				date    : function( f, v, node ) {
-					return +node.get( f ) === +v;
-				},
-				default : function( f, v, node ) {
-					return node.get( f ) === v;
-				},
-				regexp  : function( f, v, node ) {
-					return v.test( node.get( f ) );
-				},
-				string  : function( f, v, node ) {
-					return String( node.get( f ) ).toLowerCase() === v;
-				}
-			},
-			sort_dir = {
-				asc     : function( a, b ) {
-					return a[0] === b[0] ? 0 : a[0] > b[0] ? 1 : -1;
-				},
-				desc    : function( a, b ) {
-					return a[0] === b[0] ? 0 : a[0] < b[0] ? 1 : -1;
-				}
-			};
-
-		return {
-// class configuration
-			constructor   : function DataStore( config ) {
-				this.mixin( 'observer', is_obj( config ) ? config.observers : [] ).parent( arguments );
-			},
-			extend        : lib.Source,
-			mixins        : {
-				observer  : 'Observer'
-			},
-			module        : __lib__,
-// instance configuration properties
-			data          : null,
-			id            : null,
-			proxy         : null,
-			schema        : null,
-// accessors
-			changes       : {
-				get       : function() {
-					return this.data.reduce( function( nodes, node ) {
-						!node.dirty || nodes.push( node );
-						return nodes;
-					}, [] );
-				},
-				set       : function() { return this.changes; }
-			},
-			dirty         : {
-				get       : function() { return this.data.values.pluck( 'dirty' ).some( is_true ); },
-				set       : function() { return this.dirty; }
-			},
-			size          : {
-				get       : function() { return this.data.length; },
-				set       : function() { return this.size; }
-			},
-			view          : {
-				get       : function() { return this.current || this.data; },
-				set       : function() { return this.view; }
-			},
-// public properties
-			loading       : false,
-// internal properties
-			current       : null,
-			stache        : null,
-			suspendChange : 0,
-
-// public methods
-			add           : function( data, silent ) {
-				if ( is_arr( data ) ) {
-					 this.suspendChange || ++this.suspendChange;
-					 data.forEach( this.add, this );
-					!this.suspendChange || --this.suspendChange;
-					 return this.onChangeData( silent );
-				}
-
-				var node = this.onAdd( data );
-				!node || this.onChangeData( silent );
-			},
-			bindView      : function( cmp ) {
-				this.data.values.invoke( 'bindView', cmp );
-			},
-			byId          : function( id ) {
-				if ( is_obj( id ) )
-					return id instanceof DataNode && this.data.key( id )
-						 ? id
-						 : this.data.get( id[this.schema.mappings.id] ) || this.data.get( id.id );
-
-				return this.data.get( id ) || null;
-			},
-			clear         : function( silent ) {
-				this.data.clear();
-
-				silent === true || this.broadcast( 'clear' );
-				this.onChangeData( silent );
-			},
-			clearFilters  : function( silent ) {
-				this.emptyStash( silent );
-			},
-			commit        : function() {},
-			contains      : function( item ) {
-				return !!this.byId( item );
-			},
-			each          : function( fn, ctx ) {
-				this.view.ovalues.forEach( fn, ctx || this );
-			},
-			emptyStash    : function( silent ) {
-				delete this.current;
-				this.stache.length = 0;
-				silent === true || this.broadcast( 'empty:stash' );
-				this.onChangeView( silent );
-			},
-			fetch         : function( params, options ) {
-				if ( this.proxy ) {
-					this.proxy.load( this.prepare( params ), options );
-					this.loading = this.proxy.loading;
-				}
-			},
-			filter        : function( fn, ctx ) {
-				ctx || ( ctx = this );
-				this.updateView( this.view.ovalues.filter( function( node, i ) {
-					return fn.call( ctx, node, i, this );
-				}, this ) );
-			},
-			filterBy      : function( f, v ) {
-				this.filter( ( filters[util.ntype( v )] || filters.default ).bind( this, f, v ) );
-			},
-			find          : function( fn, ctx ) {
-				ctx || ( ctx = this );
-				return this.data.ovalues.find( function( node, i ) {
-					return fn.call( ctx, node, i, this );
-				}, this );
-			},
-			findAll       : function( fn, ctx ) {
-				ctx || ( ctx = this );
-				return this.data.ovalues.filter( function( node, i ) {
-					return fn.call( ctx, node, i, this );
-				}, this );
-			},
-			first         : function() { return this.getAt( 0 ); },
-			get           : function( node ) {
-				if ( is_obj( node ) )
-					return node instanceof DataNode && this.data.key( node )
-						 ? node
-						 : this.data.get( node[this.schema.mappings.id] ) || this.data.get( node.id );
-
-				return this.byId( node ) || this.getAt( node ) || null;
-			},
-			getAt         : function( i ) {
-				return this.data.ovalues[i > - 1 ? i : this.data.length + i] || null;
-			},
-			getBoundEls   : function( cmp ) {
-				return this.data.values.invoke( 'getBoundEl', cmp );
-			},
-			indexOf       : function( node, use_view ) {
-				node = this.get( node ); // todo: shouls this use use_view too?
-				return node ? ( use_view === true ? this.view : this.data ).ovalues.indexOf( node ) : -1;
-			},
-			last          : function() { return this.getAt( -1 ); },
-			load          : function( data, options ) {
-				if ( data.success && data.items ) {
-					this.add( data.items, !!options );
-					!options || this.onChangeData( false, options );
-				}
-				else
-					this.broadcast( 'load:empty', data, options );
-			},
-			map           : function( fn, ctx ) {
-				return this.view.ovalues.map( fn, ctx || this );
-			},
-			next          : function( node ) {
-				var i = this.indexOf( node, true );
-				return !!~i ? this.view.ovalues[i + 1] || null : null;
-			},
-			prev          : function( node ) {
-				var i = this.indexOf( node, true );
-				return !!~i ? this.view.ovalues[i - 1] || null : null;
-			},
-			reduce        : function( fn, val, ctx ) {
-				ctx || ( ctx = this );
-				return this.view.ovalues.reduce( function( v, node ) {
-					return fn.call( ctx, v, node );
-				}, val );
-			},
-			remove        : function( node, silent ) {
-				node = this.get( node );
-
-				!node || !this.onRemove( node ) || silent === true || this.onChangeData();
-			},
-			revert        : function( node, silent ) {
-				if ( node ) {
-					node = this.get( node );
-					if ( node.dirty ) {
-						node.revert();
-						silent === true || this.broadcast( 'revert', node ).onChangeData();
-					}
-					return;
-				}
-
-				if ( is_bool( node ) )
-					silent = node;
-
-				node = this.changes;
-
-				if ( node.length ) {
-					node.invoke( 'revert' );
-					silent === true || this.broadcast( 'revert', node ).onChangeData();
-				}
-			},
-			setProxy      : function( proxy ) {
-				if ( this.proxy ) {
-					this.proxy.ignore( 'error',     'onLoadError', this )
-							  .ignore( 'load',      'onLoad',      this )
-							  .ignore( 'loadstart', 'onLoadStart', this )
-							  .ignore( 'timeout',   'onLoadError', this );
-
-					delete this.proxy;
-				}
-
-				if ( is_str( proxy ) )
-					proxy = { urlBase : proxy };
-
-				if ( this.proxy = lookupProxy( proxy ) ) {
-						this.proxy.observe( {
-							error     : 'onLoadError', load    : 'onLoad',
-							loadstart : 'onLoadStart', timeout : 'onLoadError',
-							ctx       : this
-						} );
-
-						this.broadcast( 'set:proxy' );
-				}
-			},
-			setSchema     : function( schema ) { // noinspection FallthroughInSwitchStatementJS
-				if ( this.schema = lookupSchema( schema ) )
-					this.broadcast( 'set:schema' );
-			},
-			sort          : function( fn, ctx ) {
-				this.updateView( this.view.ovalues.slice().sort( fn.bind( ctx || this ) ) );
-			},
-			sortBy        : function( f, d ) {
-				this.updateView( sort_prepare( this, f ).sort( sort_dir[String( d ).toLowerCase()] || sort_dir.asc ).pluck( 1 ) );
-			},
-			stash         : function() {
-				if ( this.current ) {
-					this.stache.push( this.current.clone() );
-					delete this.current;
-					this.broadcast( 'stash' );
-				}
-			},
-			toJSON        : function() {
-				return this.view.ovalues.pluck( 'src' );
-			},
-			undo          : function( n ) {
-				if ( this.stache.length ) {
-					if ( isNaN( n ) || n < 0 )
-						n = 0;
-
-					var stash = this.stache[n];
-
-					this.stache.splice( 0, n + 1 );
-
-					this.current = stash;
-
-					this.onChangeView();
-				}
-				else if ( delete this.current )
-					this.onChangeView();
-			},
-			updateView    : function( view ) {
-				this.stash();
-
-				this.current = lib( 'Hash' );
-
-				view.forEach( add, this.current );
-
-				this.onChangeView();
-			},
-// stub methods
-			onAdd          : function( data ) {
-				var existing, node;
-
-				if ( data instanceof DataNode )
-					node = data.schema === this.schema && this.schema.valid( data.src )
-						 ? data
-						 : DataNode.create( this.schema, data.raw || data.src );
-				else
-					node = DataNode.create( this.schema, data );
-
-				existing = this.data.get( node.id );
-
-				existing ? existing.set( node.raw ) : this.data.set( node.id, node );
-
-				return node;
-			},
-			onChangeData   : function( silent, options ) {
-				if ( this.suspendChange ) return;
-
-				this.emptyStash( true );
-				silent === true || this.broadcast( 'change:data', options );
-
-				if ( this.proxy )
-					this.loading = this.proxy.loading;
-			},
-			onChangeView   : function( silent ) {
-				this.suspendChange || silent === true || this.broadcast( 'change:view' );
-			},
-			onLoad         : function( proxy, data, status, xhr, config ) {
-				this.broadcast( 'load:complete', data, status, xhr, config ).load( this.schema.coerce( data ), config.options );
-			},
-			onLoadError    : function( proxy, err, status, xhr, config ) {
-				this.broadcast( 'load:error', err, status, xhr, config.options );
-			},
-			onLoadStart    : function() {
-				this.broadcast( 'load:start' );
-			},
-			onRemove       : function( node ) {
-				var id = node.id;
-
-				!this.current || this.current.remove( id );
-				this.stache.invoke( 'remove', id );
-
-				return this.data.remove( id );
-			},
-			prepare       : function( params ) {
-				return params;
-			},
-
-// internal methods
-			init          : function() {
-				this.parent( arguments );
-				this.stache = [];
-
-				var data    = this.data,
-					proxy   = this.proxy,
-					schema  = this.schema;
-
-				util.remove( this, 'data', 'proxy', 'schema' );
-
-				this.data   = lib( 'Hash' );
-
-				this.setProxy( proxy )
-					.setSchema( schema );
-
-				switch ( util.ntype( data ) ) {
-					case 'object' : this.load( this.schema.coerce( data ) ); break;
-					case 'array'  : this.add( data );                        break;
-				}
-			}
-		};
-
-		function add( node ) {
-			this.set( node.id, node );
-		}
-
-		function sort_prepare( store, f ) {
-			return store.view.ovalues.map( function( node ) {
-				return [node.get( f ), node];
-			} );
-		}
-	}() );
 
 
 
@@ -2415,7 +1911,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 
 // public methods
 			add           : function( data, silent ) {
-				if ( is_arr( data ) ) {
+				if ( Array.isArray( data ) ) {
 					 this.suspendChange || ++this.suspendChange;
 					 data.forEach( this.add, this );
 					!this.suspendChange || --this.suspendChange;
@@ -2509,7 +2005,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				var data = this.readResponse( raw );
 
 				if ( data.success && data.items ) {
-					this.add( data.items, !!options );
+					this.clearFilters( true ).add( data.items, !!options );
 					!options || this.onChangeData( false, options );
 				}
 				else
@@ -2521,6 +2017,9 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			next          : function( model ) {
 				var i = this.indexOf( model, true );
 				return !!~i ? this.view.ovalues[i + 1] || null : null;
+			},
+			pluck         : function( key ) {
+				return this.view.values.invoke( 'get', key );
 			},
 			prev          : function( model ) {
 				var i = this.indexOf( model, true );
@@ -2553,7 +2052,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 					return;
 				}
 
-				if ( is_bool( model ) )
+				if ( typeof model == 'boolean' )
 					silent = model;
 
 				model = this.changes;
@@ -2577,7 +2076,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 					delete this.proxy;
 				}
 
-				if ( is_str( proxy ) )
+				if ( typeof proxy == 'string' )
 					proxy = lookupProxy( proxy ) || { urlBase : proxy };
 
 				if ( this.proxy = lookupProxy( proxy ) ) {
@@ -2729,6 +2228,12 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		}
 	}() );
 
+	util.def( __lib__.data, 'lookup', { value : {
+		collection : lookupStore,
+		model      : lookupModel,
+		schema     : lookupSchema
+	} }, 'r' );
+
 
 
 /*~  src/mixins/DataProcessor.js  ~*/
@@ -2760,269 +2265,6 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		},
 		processItem : function( item ) { return item.toJSON ? item.toJSON() : item.src || item; }
 	} );
-
-
-
-/*~  src/mixins/DataView.js  ~*/
-
-	define( namespace( 'mixins.DataView' ), function() {
-		function clear( cmp ) {
-			util.remove( cached( cmp ), this );
-			return cmp;
-		}
-		function clear_prop( cmp, prop ) {
-			delete cached( cmp )[prop];
-			return cmp;
-		}
-
-		function elements( cmp, fn, slc, prop ) {
-			if ( !cmp.ready ) return api.$();
-
-			var cache = cached( cmp ),
-				els   = cache[prop];
-
-			return util.type( els ) == 'element[]'
-				 ? els
-				 : cache[prop] = cmp.$el[fn]( slc );
-		}
-
-		function get_id( el ) {
-			return '#' + el.id;
-		}
-
-		function handlers_add( attr, val, key ) {
-			attr[key] = key.indexOf( 'data-' ) === 0 ? ( this.id + '::' + val ) : val;
-			return attr;
-		}
-		function handlers_rem( attr, val, key ) {
-			attr[key] = '';
-			return attr;
-		}
-
-		var props_all       = 'selectables selected unselected'.split( ' ' ),
-			props_selection = props_all.slice( 1 ),
-			clear_all       = clear.bind( props_all ),
-			clear_selection = clear.bind( props_selection ),
-			selection_types = {
-				multiple : true,
-				none     : true,
-				single   : true
-			},
-			view_attr       = {
-				'data-click'      : 'handleItemClick',
-				'data-mouseenter' : 'handleItemOver',
-				'data-mouseleave' : 'handleItemOut',
-				 role             : 'button'
-			};
-
-		return {
-// class configuration
-			extend            : Object,
-			module            : __lib__,
-
-// instance configuration
-
-// accessors
-			selectables       : { get : function() {
-				return elements( this, 'find', this.slcItem, 'selectables' );
-			} },
-			selected          : { get : function() {
-				return elements( this, 'find', this.slcItemSelected, 'selected' );
-			} },
-			selectionType     : {
-				get : function() {
-					return cached( this ).selectionType;
-				},
-				set : function( val ) {
-						val   = String( val ).toLowerCase();
-					var cache = cached( this ), el,
-						oval  = cache.selectionType;
-
-					if ( oval === val || !( val in selection_types ) ) return oval;
-
-					cache.selectionType = val;
-
-					if ( this.ready ) {
-						switch( val ) {
-							case 'none'   : this.deselectAll(); break;
-							case 'single' :
-								if ( this.selected.length > 1 ) {
-									el = this.selected[0];
-									this.select( el );
-								}
-								break;
-						}
-
-						this.broadcast( 'change:selectiontype', this, val, oval );
-					}
-
-					return val;
-				}
-			},
-			unselected        : { get : function() {
-				return elements( this, 'not', this.slcItemSelected, 'unselected' );
-			} },
-
-// public methods
-			deselect          : function( item ) {
-				   !this.interactive
-				|| !this.isSelected( item )
-				||  this.broadcast( 'before:deselect:item', ( item = this.getItem( item ) ) ) === false
-				||  this.onDeselect( item ).broadcast( 'deselect:item', item );
-			},
-			deselectAll       : function( silent ) {
-				if ( !this.interactive ) return;
-
-				if ( silent === true )
-					return this.onDeselectAll();
-
-				clear_prop( this, 'selected' );
-
-				  !this.selected.length
-				|| this.broadcast( 'before:deselect:all' ) === false
-				|| this.onDeselectAll().broadcast( 'deselect:all' );
-			},
-			getItem           : function( item ) {
-				if ( util.type( item ) == 'element[]' )
-					item = item[0];
-
-				switch ( util.type( item ) ) {
-					case 'string'      : item = this.$el.find( item )[0] || this.$el.find( '#' + item )[0] || null; break;
-					case 'htmlelement' : item = this.$el.contains( item ) ? item : null;                            break;
-					default            : return null;
-				}
-
-				return item ? api.$( item ) : null;
-			},
-			invertSelection   : function() {
-				!this.interactive || this.broadcast( 'before:select:inverse' ) === false || this.onInvertSelection().broadcast( 'select:inverse' );
-			},
-			isSelected        : function( item ) {
-				return ( item = this.getItem( item ) ) ? item.hasClass( this.clsItemSelected ) : false;
-			},
-			refreshView       : function() {
-				var selected = this.selected;
-
-				clear_all( this );
-
-				switch ( this.selectionType ) {
-					case 'multiple' : case 'single' :
-						this.selectables.attr( Object.reduce( util.merge( view_attr ), handlers_add.bind( this ), util.obj() ) );
-
-						if ( selected.length ) {
-							if ( this.selectionType === 'multiple' )
-								Array.coerce( this.$el.find( Array.coerce( selected ).map( get_id ).join( ', ' ) ) ).map( this.select, this );
-							else
-								this.select( this.$el.find( selected[0] ) );
-						}
-						break;
-					default         :
-						this.selectables.attr( Object.reduce( util.merge( view_attr ), handlers_rem.bind( this ), util.obj() ) );
-				}
-			},
-			select            : function( item ) {
-				   !this.interactive
-				||  this.selectionType === 'none'
-				|| !( item = this.getItem( item ) )
-				||  this.isSelected( item )
-				||  this.broadcast( 'before:select:item', item ) === false
-				||  this.onSelect( item ).broadcast( 'select:item', item );
-			},
-			selectAll         : function( silent ) {
-				if ( !this.interactive || this.selectionType !== 'multiple' ) return;
-
-				if ( silent === true )
-					return this.onSelectAll();
-
-				clear_prop( this, 'unselected' );
-
-				  !this.unselected.length
-				|| this.broadcast( 'before:select:all' ) === false
-				|| this.onSelectAll().broadcast( 'select:all' );
-			},
-			toggle            : function( item ) {
-				if ( item = this.getItem( item ) )
-					this[this.isSelected( item ) ? 'deselect' : 'select']( item );
-			},
-// stub methods
-			onDeselect        : function( item ) {
-				clear_selection( this );
-
-				item.removeClass( this.clsItemSelected );
-
-				clear_selection( this );
-			},
-			onDeselectAll     : function() {
-				clear_selection( this );
-
-				this.selected.removeClass( this.clsItemSelected );
-
-				clear_selection( this );
-			},
-			onInvertSelection : function() {
-				var cls        = this.clsItemSelected,
-					selected   = this.selected,
-					unselected = this.unselected;
-
-				clear_selection( this );
-
-				selected.removeClass( cls );
-				unselected.addClass( cls );
-
-				clear_selection( this );
-			},
-			onSelect          : function( item ) {
-				clear_selection( this );
-
-				if ( this.selectionType === 'single' )
-					this.deselect( this.selected );
-
-				item.addClass( this.clsItemSelected );
-
-				clear_selection( this );
-			},
-			onSelectAll       : function() {
-				clear_selection( this );
-
-				this.unselected.addClass( this.clsItemSelected );
-
-				clear_selection( this );
-			},
-			registerEvents    : function() {
-				this.observe( {
-					'after:render' : 'refreshView',
-					'refs:applied' : 'refreshView'
-				} );
-			},
-// internal methods
-			init              : function() {
-				if ( !this.selectionType )
-					this.selectionType = 'none';
-
-				['', 'collapsed', 'focused', 'over', 'selected'].join( ' item-' ).trim().split( ' ' ).map( this.prefixClsSlc, this );
-			},
-			handleItemClick   : function( evt ) {
-				var el = api.$( evt.currentTarget ).closest( this.slcItem );
-
-				if ( el.length ) {
-					this.broadcast( 'item:click', el, evt );
-
-					if ( this.selectionType !== 'none' )
-						this.toggle( el );
-				}
-			},
-			handleItemOut     : function( evt ) {
-				var el = api.$( evt.currentTarget ).closest( this.slcItem );
-
-				!el.length || !el.hasClass( this.itemOver ) || this.broadcast( 'item:out', el.removeClass( this.clsItemOver ), evt );
-			},
-			handleItemOver    : function( evt ) {
-				var el = api.$( evt.currentTarget ).closest( this.slcItem );
-
-				!el.length || el.hasClass( this.itemOver ) || this.broadcast( 'item:over', el.addClass( this.clsItemOver ), evt );
-			}
-		};
-	}() );
 
 
 
@@ -3216,7 +2458,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				default                      : return null;
 			}
 
-			if ( is_str( html ) )
+			if ( typeof html == 'string' )
 				html = html.trim();
 
 			return this.fragmentalize( html ? html : '' );
@@ -3228,7 +2470,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		afterRender     : function() {
 			 this.broadcast( 'after:render' );
 
-			!is_bool( this.active ) || this[( this.active === true ? '' : 'de' ) + 'activate']();
+			typeof this.active != 'boolean' || this[( this.active === true ? '' : 'de' ) + 'activate']();
 
 			if ( this.focusable !== false ) {
 				addDOMListener( this.$elFocus, 'blur',  this.id + '::blur' );
@@ -3508,6 +2750,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		},
 		module          : __lib__,
 // instance configuration
+		autoLoad        :  true,
 		bound           :  null,
 		cls             :  null,
 		clsAnim         : 'w-anim',
@@ -3659,7 +2902,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			 this.broadcast( 'update' ).broadcast( 'change:dom' );
 		},
 		afterTransition : function() {
-			!is_fun( this[this.afterEvent] ) || this[this.afterEvent]();
+			typeof this[this.afterEvent] != 'function' || this[this.afterEvent]();
 			delete this.afterEvent;
 		},
 		onActivate      : function() {
@@ -3717,7 +2960,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			if ( this.store ) {
 				if ( this.store.size )
 					this.once( 'after:render', this.update, this );
-				else
+				else if ( this.autoLoad !== false )
 					this.load();
 			}
 
@@ -3819,14 +3062,17 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		initStore       : function() {
 			var s = this.store;                  // noinspection FallthroughInSwitchStatementJS
 			switch ( util.type( s ) ) {
-				case Name_lc + '-data-collection' : break;
-				case 'object'                :
-				case 'nullobject'            :
-					this.store = widgie.create( 'data.Collection', s );
+				case 'string'     :
+				case 'function'   :
+					s = lookupStore( s );
+					if ( s ) this.store = new s;
+					break;
+				case 'object'     :
+					this.store = s instanceof getClass( 'data.Collection' ) ? s : widgie.create( 'data.Collection', s );
 			}
 		},
 		onAction        : function( action, evt ) {
-			if ( is_fun( this[action] ) )
+			if ( typeof this[action] == 'function' )
 				this[action]( evt );
 		},
 		syncSize        : function() {}
@@ -3864,7 +3110,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			if ( arguments.length > 1 && isNaN( arguments[1] ) )
 				item = Array.coerce( arguments );
 
-			if ( is_arr( item ) ) {
+			if ( Array.isArray( item ) ) {
 				this.suspendEvents();
 				item = item.map( this.add, this );
 				this.resumeEvents().broadcast( 'add', item );
@@ -3894,12 +3140,12 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		},
 		get           : function( item ) {
 //if ( typeof item == 'string' && item.indexOf( 'box' ) > -1 ) debugger;
-			if ( this.items.length )  // noinspection FallthroughInSwitchStatementJS
+			if ( item !== null && item !== UNDEF && this.items.length )  // noinspection FallthroughInSwitchStatementJS
 				switch ( util.type( item ) ) {
 					case 'event'     : item = item.currentTarget;                          // allow fall-through
 					case 'element[]' : case 'htmlelement' : item = api.$( item ).data( 'id' ); // allow fall-through
 					case 'number'    : case 'string'      : return this.items[item] || this.map[item] || this.map[this.id + '-' + item] || null;
-					default          : return util.got( item, 'id', 'cmpId' ) ? this.get( item.id ) || this.get( this.id + '-' + item.cmpId ) : null;
+					default          : return 'id' in item || 'cmpId' in item ? this.get( item.id ) || this.get( this.id + '-' + item.cmpId ) : null;
 				}
 			return null;
 		},
@@ -4009,7 +3255,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			}
 		},
 		lookup        : function( item ) {
-			if ( is_str( item ) )
+			if ( typeof item == 'string' )
 				item = Mgr.get( item );
 
 			if ( is_obj( item ) && !item.id && item.cmpId )
@@ -4029,7 +3275,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		onLoadItems   : function( append, items ) {
 			append === true || this.clear( true );
 
-			!( !is_arr( items ) || !is_obj( items ) ) || this.add( items );
+			!( !Array.isArray( items ) || !is_obj( items ) ) || this.add( items );
 
 			this.broadcast( 'load:items:complete' );
 		}
@@ -4173,7 +3419,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				this.parent( arguments ).initProxy();
 			},
 			initProxy    : function() {
-				if ( is_str( this.proxy ) )
+				if ( typeof this.proxy == 'string' )
 					this.proxy  = { urlBase : this.proxy };
 
 				if ( this.proxy = lookupProxy( this.proxy ) )
@@ -4373,7 +3619,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		return {
 			constructor : function CustomError( config ) {
 				if ( !is_obj( config ) )
-					config = is_str( config ) ? { message : config } : {};
+					config = typeof config == 'string' ? { message : config } : {};
 
 				util.copy( this, config );
 
@@ -4384,8 +3630,8 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			name        : capitalize( Name ) + 'Error',
 			toString    : function() { return this.message; },
 			trace       : Error.caputureStackTrace ? function() { //noinspection FallthroughInSwitchStatementJS
-				switch ( util.ntype( this.method ) ) {
-					case 'string'   : if ( !this.cmp || !is_fun( this.cmp[this.method] ) ) break;
+				switch ( typeof this.method ) {
+					case 'string'   : if ( !this.cmp || typeof this.cmp[this.method] != 'function' ) break;
 									  this.method = this.cmp[this.method];
 					case 'function' : Error.captureStackTrace( this, this.method );        break;
 				}
@@ -4394,7 +3640,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 	}() );
 
 	function error( e ) {
-		if ( util.got( e, 'type' ) ) {
+		if ( 'type' in Object( e ) ) {
 			if ( util.has( error.code, e.type ) )
 				e.name = error.code[e.type];
 			delete e.type;
