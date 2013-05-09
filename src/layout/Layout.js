@@ -29,6 +29,7 @@
 			this.disabled = false;
 		},
 		forceLayout       : function() {
+			this.busy = false;
 			this.layout( true );
 		},
 		layout           : function( force ) {

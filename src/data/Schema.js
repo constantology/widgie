@@ -158,6 +158,7 @@
 			id          : null,
 			schema      : null,
 			store       : null,
+			track       : true,
 			type        : 'object',
 
 	// internal properties

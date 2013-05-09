@@ -423,9 +423,9 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 '<{{ @.tagName }} class=\"{{ @.clsBase }} {{ @.clsDefault if @.clsDefault|exists }} {{ @.cls if @.cls|exists }} {{ @.clsBase }}-{{ @.inputType }}\"{% if @.errorMsg %} data-error-msg=\"{{ @.errorMsg }}\"{% endif %} tabindex=\"-1\"><div class=\"{{ @.clsBase }}-ct\" data-ref=\"ct\"{% if @.toolTip %} data-tool-tip=\"{{ @.toolTip }}\"{% endif %}>',
 '	{% if @.showLabel AND @.labelPosition !== \'after\' %}{{ @|parse:\"label\" }}{% endif %}',
 '	<span class=\"{{ @.clsBase }}-input-ct {{ @.clsBase }}-input-{{ @.inputType }}-ct\">{% if @.inputType === \'text\' AND @.multiLine === true %}',
-'		<textarea class=\"{{ @.clsBase }}-input {{ @.clsBase }}-input-multiline {{ @.clsBase }}-input-{{ @.inputType }}\" data-ref=\"field\" id=\"{{ @.id }}-input\" name=\"{{ @.name }}\" {{ @|parse:\"placeholder\" if @.placeholder|type:\"string\" }}></textarea>',
+'		<textarea autocapitalize=\"off\" autocorrect=\"off\" class=\"{{ @.clsBase }}-input {{ @.clsBase }}-input-multiline {{ @.clsBase }}-input-{{ @.inputType }}\" data-ref=\"field\" id=\"{{ @.id }}-input\" name=\"{{ @.name }}\" {{ @|parse:\"placeholder\" if @.placeholder|type:\"string\" }}></textarea>',
 '	{% else %}',
-'		<input class=\"{{ @.clsBase }}-input {{ @.clsBase }}-input-{{ @.inputType }}\" data-ref=\"field\" id=\"{{ @.id }}-input\" name=\"{{ @.name }}\" {{ @|parse:\"placeholder\" if @.placeholder|type:\"string\" }} type=\"{{ @._inputType }}\" value=\"{{ @.value if @.value|exists }}\" />',
+'		<input autocapitalize=\"off\" autocorrect=\"off\" class=\"{{ @.clsBase }}-input {{ @.clsBase }}-input-{{ @.inputType }}\" data-ref=\"field\" id=\"{{ @.id }}-input\" name=\"{{ @.name }}\" {{ @|parse:\"placeholder\" if @.placeholder|type:\"string\" }} type=\"{{ @._inputType }}\" value=\"{{ @.value if @.value|exists }}\" />',
 '	{% endif %}</span>',
 '	{% if @.showLabel AND @.labelPosition === \'after\' %}{{ @|parse:\"label\" }}{% endif %}',
 '</div></{{ @.tagName }}>' );
@@ -915,6 +915,20 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 /*~  src/util/Validate.js  ~*/
 
 	util.def( __lib__, 'Validate', { value : {
+		checkbox : {
+			minmax : function( field, value ) {
+				return true;
+			},
+			raw    : function( field, value ) {
+				return value;
+			},
+			val    : function( field, value ) {
+				return value;
+			},
+			valid  : function( field, value ) {
+				return !field.elField || field.elField.checked === true;
+			}
+		},
 		date     : {
 			minmax : function( field, value ) {
 				return value <= field.max && value >= field.min;
@@ -929,6 +943,20 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				return util.ntype( value ) == 'date' && value <= field.max && value >= field.min;
 			}
 		},
+		file     : { // todo: add mime-type validation and multiple file support
+			minmax : function( field, value ) {
+				return true;
+			},
+			raw    : function( field, value ) {
+				return field.elField.files[0];
+			},
+			val    : function( field, value ) {
+				return field.elField.files[0];
+			},
+			valid  : function( field, value ) {
+				return true;
+			}
+		},
 		number   : {
 			minmax : function( field, value ) {
 				return value <= field.max && value >= field.min;
@@ -939,20 +967,6 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			},
 			valid  : function( field, value ) {
 				return util.type( value ) == 'number' && ( field.allowDecimals || Math.floor( value ) === value );
-			}
-		},
-		checkbox : {
-			minmax : function( field, value ) {
-				return true;
-			},
-			raw    : function( field, value ) {
-				return value;
-			},
-			val    : function( field, value ) {
-				return value;
-			},
-			valid  : function( field, value ) {
-				return !field.elField || field.elField.checked === true;
 			}
 		},
 		text     : {
@@ -971,7 +985,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		}
 	} }, 'cw' );
 	__lib__.Validate.radio = __lib__.Validate.checkbox;
-	__lib__.Validate.email = __lib__.Validate.file = __lib__.Validate.number = __lib__.Validate.password = __lib__.Validate.text;
+	__lib__.Validate.email = __lib__.Validate.hidden = __lib__.Validate.number = __lib__.Validate.password = __lib__.Validate.text;
 
 
 
@@ -1473,8 +1487,8 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				if ( key in prop ) {
 					if ( prop[key].store ) {
 						this.src[key].load( val );
-						this.suspendChange || this.broadcast( 'change' );
-						this.broadcast( 'change:' + key );
+						this.suspendChange || prop[key].track === false || this.broadcast( 'change' );
+						prop[key].track === false || this.broadcast( 'change:' + key );
 					}
 					else {
 						clean = prop[key].coerce( val );
@@ -1482,8 +1496,8 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 							this.raw[key]     = val;
 							this.changes[key] = this.src[key];
 							this.src[key]     = clean;
-							this.suspendChange || this.broadcast( 'change' );
-							this.broadcast( 'change:' + key, this.src[key], this.changes[key] );
+							this.suspendChange || prop[key].track === false || this.broadcast( 'change' );
+							prop[key].track === false || this.broadcast( 'change:' + key, this.src[key], this.changes[key] );
 						}
 					}
 				}
@@ -1730,6 +1744,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			id          : null,
 			schema      : null,
 			store       : null,
+			track       : true,
 			type        : 'object',
 
 	// internal properties
@@ -2675,6 +2690,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			this.disabled = false;
 		},
 		forceLayout       : function() {
+			this.busy = false;
 			this.layout( true );
 		},
 		layout           : function( force ) {
@@ -3294,6 +3310,12 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			return val;
 		}
 
+		function toFormData( fd, field ) {
+			fd.append( field.name, field.value );
+
+			return fd;
+		}
+
 		return {
 // class configuration
 			constructor    : function Form() {
@@ -3306,12 +3328,13 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			clsBase      : 'w-form',
 			clsDefault   : 'w-form',
 			proxy        : null,
+			upload       : false,
 // accessors
 			valid        : { get : function() {
 				return this.fields.pluck( 'valid' ).every( util );
 			} },
 			value        : { get : function() {
-				return this.fields.reduce( toJSON, util.obj() );
+				return this.fields.reduce( this.upload === true ? toFormData : toJSON, this.upload === true ? new FormData() : util.obj()  );
 			} },
 // public properties
 // internal properties
@@ -3344,6 +3367,8 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 						 method       : this.proxy.method
 					} );
 					addDOMListener( this.$el, 'submit', this.id + '::handleSubmit' );
+					if ( this.upload === true )
+						this.$el.attr( 'enctype', 'multipart/form-data' );
 				}
 			},
 			onAdd        : function( item ) {
@@ -3501,14 +3526,14 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 							c.value    = v;
 
 							if ( this.ready ) {
-								this.$elField.val( this.valToRaw( v ) );
+								this.inputType == 'file' || this.$elField.val( this.valToRaw( v ) );
 								this.broadcast( 'change', v, c.val_prev );
 							}
 
 						}
 						else {
 							if ( this.ready ) {
-								this.$elField.val( this.valToRaw( c.value ) );
+								this.inputType == 'file' || this.$elField.val( this.valToRaw( c.value ) );
 								this.broadcast( 'change', c.value, c.val_prev );
 							}
 						}
@@ -3544,7 +3569,9 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				this.$elField.val( this.value );
 				switch ( this.inputType ) {
 					case 'checkbox' : case 'radio' :
-						this.$elField.attr( 'data-click', this.id + '::onFocus' );
+						addDOMListener( this.elField, 'click', this.id + '::onFocus' );
+						break;
+					case 'file'     : addDOMListener( this.elField, 'change', this.id + '::handleChange' );
 				}
 			},
 			onBlur         : function() {
@@ -3566,7 +3593,8 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				!evt || evt.target !== this.elFocus || this.broadcast( 'dom:blur', evt );
 			},
 			handleChange   : function() {
-				this.value = this.$elField.val();
+				var val = this.$elField.val();
+				this.value = this.inputType == 'file' && util.ntype( val ) == 'filelist' ? val[0] : val;
 			},
 			handleFocus    : function( evt ) {
 				!evt || evt.target !== this.elFocus || this.broadcast( 'dom:focus', evt );
@@ -3715,7 +3743,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			$_items : '$el',
 			clsBase : 'w-viewport',
 			$ct     : api.$( doc.documentElement ),
-			ct      : doc.documentElement ,
+			ct      : doc.documentElement,
 			id      : 'viewport'
 		} );
 
@@ -3723,6 +3751,8 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		vp.rendered = true;
 
 		vp.$el.addClass( vp.clsBase ).attr( 'id', vp.id );
+//		vp.$elCt = api.$.toElement( '<div class="w-viewport-ct"></div>' );
+//		vp.$elCt.appendTo( vp.el );
 
 // goddamn chrome v26 is intermittently doing some weird shizzle, so need to remove singletons for now
 		util.def( __lib__, 'Viewport', { value : vp }, 'cw' );

@@ -5,6 +5,12 @@
 			return val;
 		}
 
+		function toFormData( fd, field ) {
+			fd.append( field.name, field.value );
+
+			return fd;
+		}
+
 		return {
 // class configuration
 			constructor    : function Form() {
@@ -17,12 +23,13 @@
 			clsBase      : 'w-form',
 			clsDefault   : 'w-form',
 			proxy        : null,
+			upload       : false,
 // accessors
 			valid        : { get : function() {
 				return this.fields.pluck( 'valid' ).every( util );
 			} },
 			value        : { get : function() {
-				return this.fields.reduce( toJSON, util.obj() );
+				return this.fields.reduce( this.upload === true ? toFormData : toJSON, this.upload === true ? new FormData() : util.obj()  );
 			} },
 // public properties
 // internal properties
@@ -55,6 +62,8 @@
 						 method       : this.proxy.method
 					} );
 					addDOMListener( this.$el, 'submit', this.id + '::handleSubmit' );
+					if ( this.upload === true )
+						this.$el.attr( 'enctype', 'multipart/form-data' );
 				}
 			},
 			onAdd        : function( item ) {

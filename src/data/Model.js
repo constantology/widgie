@@ -157,8 +157,8 @@
 				if ( key in prop ) {
 					if ( prop[key].store ) {
 						this.src[key].load( val );
-						this.suspendChange || this.broadcast( 'change' );
-						this.broadcast( 'change:' + key );
+						this.suspendChange || prop[key].track === false || this.broadcast( 'change' );
+						prop[key].track === false || this.broadcast( 'change:' + key );
 					}
 					else {
 						clean = prop[key].coerce( val );
@@ -166,8 +166,8 @@
 							this.raw[key]     = val;
 							this.changes[key] = this.src[key];
 							this.src[key]     = clean;
-							this.suspendChange || this.broadcast( 'change' );
-							this.broadcast( 'change:' + key, this.src[key], this.changes[key] );
+							this.suspendChange || prop[key].track === false || this.broadcast( 'change' );
+							prop[key].track === false || this.broadcast( 'change:' + key, this.src[key], this.changes[key] );
 						}
 					}
 				}

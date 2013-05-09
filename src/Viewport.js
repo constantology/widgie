@@ -18,7 +18,7 @@
 			$_items : '$el',
 			clsBase : 'w-viewport',
 			$ct     : api.$( doc.documentElement ),
-			ct      : doc.documentElement ,
+			ct      : doc.documentElement,
 			id      : 'viewport'
 		} );
 
@@ -26,6 +26,8 @@
 		vp.rendered = true;
 
 		vp.$el.addClass( vp.clsBase ).attr( 'id', vp.id );
+//		vp.$elCt = api.$.toElement( '<div class="w-viewport-ct"></div>' );
+//		vp.$elCt.appendTo( vp.el );
 
 // goddamn chrome v26 is intermittently doing some weird shizzle, so need to remove singletons for now
 		util.def( __lib__, 'Viewport', { value : vp }, 'cw' );

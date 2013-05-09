@@ -56,14 +56,14 @@
 							c.value    = v;
 
 							if ( this.ready ) {
-								this.$elField.val( this.valToRaw( v ) );
+								this.inputType == 'file' || this.$elField.val( this.valToRaw( v ) );
 								this.broadcast( 'change', v, c.val_prev );
 							}
 
 						}
 						else {
 							if ( this.ready ) {
-								this.$elField.val( this.valToRaw( c.value ) );
+								this.inputType == 'file' || this.$elField.val( this.valToRaw( c.value ) );
 								this.broadcast( 'change', c.value, c.val_prev );
 							}
 						}
@@ -99,7 +99,9 @@
 				this.$elField.val( this.value );
 				switch ( this.inputType ) {
 					case 'checkbox' : case 'radio' :
-						this.$elField.attr( 'data-click', this.id + '::onFocus' );
+						addDOMListener( this.elField, 'click', this.id + '::onFocus' );
+						break;
+					case 'file'     : addDOMListener( this.elField, 'change', this.id + '::handleChange' );
 				}
 			},
 			onBlur         : function() {
@@ -121,7 +123,8 @@
 				!evt || evt.target !== this.elFocus || this.broadcast( 'dom:blur', evt );
 			},
 			handleChange   : function() {
-				this.value = this.$elField.val();
+				var val = this.$elField.val();
+				this.value = this.inputType == 'file' && util.ntype( val ) == 'filelist' ? val[0] : val;
 			},
 			handleFocus    : function( evt ) {
 				!evt || evt.target !== this.elFocus || this.broadcast( 'dom:focus', evt );
