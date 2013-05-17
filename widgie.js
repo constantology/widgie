@@ -11,8 +11,12 @@
 
 	 	if ( el.length ) {
 			existing = el.attr( 'data-' + event );
-			if ( existing )
-				listener += '|' + existing;
+
+			if ( existing ) {
+				existing = existing.split( '|' );
+				if ( !~existing.indexOf( listener ) )
+					listener = existing.join( '|' ) + '|' + listener;
+			}
 
 			el.attr( 'data-' + event, listener );
 	 	}
@@ -173,7 +177,7 @@
 				if ( !!~( i = listeners.indexOf( listener ) ) )
 					listeners.splice( i, 1 );
 
-				el.attr( 'data-' + event, listeners.join( '|' ) );
+				el.attr( 'data-' + event, listeners.length ? listeners.join( '|' ) : null );
 			}
 	 	}
 
@@ -1350,11 +1354,11 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 
 				this.changes = util.obj();
 				this.dom     = util.obj();
-				this.raw     = raw;
-				this.src     = this.schema.coerceItem( raw );
+				this.raw     = raw || util.obj();
+				this.src     = raw ? this.schema.coerceItem( raw ) : util.obj();
 
 				var schema   = this.schema,
-					id       = this.src[schema.mappings.id] || raw[schema.mappings.id];
+					id       = this.src[schema.mappings.id] || this.raw[schema.mappings.id];
 
 				this.exists  = !!id;
 				this.id      = id || 'phantom-' + ( ++count );
@@ -1379,6 +1383,9 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				get        : function() { return !!util.len( this.changes ); },
 				set        : function() { return this.dirty; }
 			},
+// flags
+			deleted        : false,
+			syncing        : false,
 // public properties
 			changes        : null,
 			id             : null,
@@ -1400,7 +1407,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 					this.proxy.delete( this );
 				}
 				else
-					this.set( 'deleted', true );
+					this.deleted = true;
 			},
 			get            : function( key ) {
 				return this.src[key] === UNDEF ? null : this.src[key];
@@ -1445,13 +1452,21 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			sync           : function() {
 				if ( this.suspendSync ) return;
 
+				this.syncing = true;
+
 				this.proxy.sync( this );
 			},
 			toJSON         : function() {
-				if ( this.destroyed )
-					return util.obj();
+				var json = util.obj();
 
-				var json = Object.reduce( this.src, toJSON.bind( this ), util.obj() );
+				if ( this.destroyed || this.deleted ) {
+					json.deleted = true;
+					return json;
+				}
+
+				json.syncing = this.syncing;
+
+				Object.reduce( this.src, toJSON.bind( this ), json );
 
 				if ( this.exists )
 					json.id = this.id;
@@ -1508,7 +1523,11 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				}
 			},
 			onSync        : function( raw, command ) {
+				this.syncing = false;
+
 				if ( !raw ) return; // todo: throw an error?
+
+				util.remove( this.dom, Object.keys( this.dom ) );
 
 				if ( command === 'delete' )
 					return this.destroy( true );
@@ -1526,12 +1545,18 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 					this.id     = this.src.id;
 					this.exists = !!this.id;
 				}
+
+				if ( command === 'read' )
+					util.remove( this.changes, Object.keys( this.changes ) );
+
 				this/*.resumeEvents()*/.broadcast( 'sync', command, raw ).broadcast( 'change' );
 			},
 			onSyncAbort   : function( command ) {
+				this.syncing = false;
 				this.broadcast( 'sync:abort', command );
 			},
 			onSyncError   : function( err, command ) {
+				this.syncing = false;
 				this.broadcast( 'sync:error', command, err );
 			},
 			syncView       : function() {
@@ -1926,7 +1951,11 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 
 // public methods
 			add           : function( data, silent ) {
+				if ( !data ) return;
+
 				if ( Array.isArray( data ) ) {
+					if ( !data.length ) return;
+
 					 this.suspendChange || ++this.suspendChange;
 					 data.forEach( this.add, this );
 					!this.suspendChange || --this.suspendChange;
@@ -2151,6 +2180,8 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 
 				if ( !( data instanceof this.model ) )
 					model = this.model.create( data );
+				else
+					model = data;
 
 				if ( existing = this.data.get( model.id ) )
 					return existing;
@@ -2423,41 +2454,42 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 
 	define( namespace( 'mixins.Renderer' ), {
 // class configuration
-		extend          : Object,
-		module          : __lib__,
+		extend             : Object,
+		module             : __lib__,
 
 // instance configuration
-		slcCt           : 'body',
-		tpl             :  Name + '.component',
+		slcCt              : 'body',
+		tpl                :  Name + '.component',
+		transitionTimeout  :  800,
 
 // flags
-		dead            : { get : function() {
+		dead               : { get : function() {
 			return this.destroyed || this.destroying;
 		} },
-		destroyed       : false,
-		destroying      : false,
-		ready           : { get : function() {
+		destroyed          : false,
+		destroying         : false,
+		ready              : { get : function() {
 			return this.rendered && !this.dead;
 		} },
-		rendered        : false,
-		rendering       : false,
+		rendered           : false,
+		rendering          : false,
 
 // properties
-		$ct             : null,
-		$el             : null,
-		ct              : null,
-		el              : null,
-		suspendUpdate   : 0,
+		$ct                : null,
+		$el                : null,
+		ct                 : null,
+		el                 : null,
+		suspendUpdate      : 0,
 
 // public methods
-		render          : function( ct ) {
+		render             : function( ct ) {
 			if ( this.ready || this.dead || this.broadcast( 'before:render' ) === false )
 				return;
 			this.rendering = true;
 			this.assignContainer( ct ).onRender().afterRender();
 			this.rendering = false;
 		},
-		prepareFragment : function( data, tpl ) {
+		prepareFragment    : function( data, tpl ) {
 			var html; // noinspection FallthroughInSwitchStatementJS
 			switch ( util.type( data ) ) {
 				case 'object'                :
@@ -2478,11 +2510,11 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 
 			return this.fragmentalize( html ? html : '' );
 		},
-		toElement       : function( tpl, data ) {
+		toElement          : function( tpl, data ) {
 			return api.$( this.parse( tpl, data ) );
 		},
 // stub methods
-		afterRender     : function() {
+		afterRender        : function() {
 			 this.broadcast( 'after:render' );
 
 			typeof this.active != 'boolean' || this[( this.active === true ? '' : 'de' ) + 'activate']();
@@ -2497,17 +2529,30 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				}
 			}
 		},
-		onAppend        : function( frag ) {
+		afterTransition    : function() {
+			if ( this.afterEvent && this.afterEvent in this ) {
+				this.afterTransition_.cb.stop();
+				delete this.afterEvent;
+				removeDOMListener( this.$el, 'transition', 'afterTransition' );
+				typeof this[this.afterEvent] != 'function' || this[this.afterEvent]();
+			}
+		},
+		onBeforeTransition : function( method ) {
+			addDOMListener( this.$el, 'transition', 'afterTransition' );
+			this.afterEvent = method;
+			this.afterTransition_();
+		},
+		onAppend           : function( frag ) {
 			this[this.updateTarget][0].appendChild( frag );
 		},
-		onDestroy       : function() {
+		onDestroy          : function() {
 			if ( this.rendered ) {
 				this.rendered = false;
 				this.$el.remove();
 				util.remove( this, '$ct $el ct el'.split( ' ' ) );
 			}
 		},
-		onRender        : function() {
+		onRender           : function() {
 			this.createDOM();
 
 			this.$el.appendTo( this.ct );
@@ -2519,12 +2564,12 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			if ( !( this.updateTarget in this ) )
 				this.updateTarget = this.$elCt ? '$elCt' : '$el';
 		},
-		onUpdate        : function( frag ) {
+		onUpdate           : function( frag ) {
 			this[this.updateTarget].html( null )[0].appendChild( frag );
 //			( this.$elCt || this.$el ).html( html );
 		},
 // internal methods
-		assignContainer : function( ct ) {
+		assignContainer    : function( ct ) {
 			var type = util.type( ct );
 			if ( util.exists( ct ) ) {
 				if ( type == 'element[]' )
@@ -2540,8 +2585,8 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			if ( this.$ct )
 				this.ct = this.$ct[0];
 		},
-		createDOM       : function() {
-			this.$el = this.toElement( this.tpl, null ).attr( 'id', this.id ).data( 'transitionend', 'afterTransition' );
+		createDOM          : function() {
+			this.$el = this.toElement( this.tpl, null ).attr( 'id', this.id );
 			this.el  = this.$el[0];
 
 			!this.$el.hasClass( this.clsDefault ) || this.$el.addClass( this.clsDefault );
@@ -2551,15 +2596,16 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 				this.$elCt = api.$( this.elCt );
 			}
 		},
-		fragmentalize   : function( html ) {
+		fragmentalize      : function( html ) {
 			var frag = doc.createDocumentFragment();
 
 			api.$( html ).appendTo( frag );
 
 			return frag;
 		},
-		init            : function() {
+		init               : function() {
 			this.tpl = api.tpl.create( this.tpl );
+			this.afterTransition_ = this.afterTransition.callback( { ctx : this, delay : this.transitionTimeout + 100 } );
 		}
 	} );
 
@@ -2917,13 +2963,9 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 //			!this.layout || this.layout.layout();
 			 this.broadcast( 'update' ).broadcast( 'change:dom' );
 		},
-		afterTransition : function() {
-			typeof this[this.afterEvent] != 'function' || this[this.afterEvent]();
-			delete this.afterEvent;
-		},
 		onActivate      : function() {
-			this.afterEvent = 'afterActivate';
-			this.active     = true;
+			this.onBeforeTransition( 'afterActivate' );
+			this.active = true;
 			this.$el.addClass( this.clsActive );
 		},
 		onAppend        : function( data, tpl ) {
@@ -2937,12 +2979,12 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		},
 		onCollapse      : function() {
 			if ( !this.ready ) return;
-			this.afterEvent = 'afterCollapse';
+			this.onBeforeTransition( 'afterCollapse' );
 			this.$el.addClass( this.clsCollapsed );
 		},
 		onDeactivate    : function() {
-			this.afterEvent = 'afterDeactivate';
-			this.active     = false;
+			this.onBeforeTransition( 'afterDeactivate' );
+			this.active = false;
 			this.$el.removeClass( this.clsActive );
 		},
 		onDestroy       : function() {
@@ -2959,7 +3001,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		},
 		onExpand        : function() {
 			if ( !this.ready ) return;
-			this.afterEvent = 'afterExpand';
+			this.onBeforeTransition( 'afterExpand' );
 			this.$el.removeClass( this.clsCollapsed );
 		},
 		onFocus         : function() {
@@ -2968,7 +3010,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			!this.elFocus || this.elFocus.focus();
 		},
 		onHide          : function() {
-			this.afterEvent = 'afterHide';
+			this.onBeforeTransition( 'afterHide' );
 			this.$el.addClass( this.clsHidden );
 		},
 		onRender        : function() {
@@ -2990,7 +3032,7 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			}
 		},
 		onShow          : function() {
-			this.afterEvent = 'afterShow';
+			this.onBeforeTransition( 'afterShow' );
 			this.$el.removeClass( this.clsHidden );
 		},
 		onUpdate        : function( data, tpl ) {
@@ -3338,7 +3380,6 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			} },
 // public properties
 // internal properties
-
 // public methods
 			reset        : function() {
 				!this.interactive || this.broadcast( 'before:reset' ) === false || this.onReset().broadcast( 'reset' );
@@ -3382,15 +3423,9 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 			onInvalid    : function() {
 				this.$el.removeClass( this.clsValid ).addClass( this.clsInvalid );
 			},
-			onLoad       : function() {
-				console.log( 'load: ', this, arguments );
-			},
-			onLoadError  : function() {
-				console.log( 'loadend: ', this, arguments );
-			},
-			onLoadStart  : function() {
-				console.log( 'loadstart: ', this, arguments );
-			},
+			onLoad       : function() { },
+			onLoadError  : function() { },
+			onLoadStart  : function() { },
 			onRemove     : function( item ) {
 				if ( item.parentBox === this )
 					util.remove( this.fields, item );
@@ -3696,8 +3731,10 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 	if ( util.ENV == 'browser' ) {
 //		api.$( global ).on( 'resize', '[data-]', handleCapture );
 
-		var events_bubble  = [
-				'blur', 'focus', 'resize', /*'scroll',*/ 'click', 'dblclick',
+		var cb_bubble      = handleBubble.callback( { buffer : 200 } ),
+			cb_capture     = handleCapture.callback( { buffer : 200 } ),
+			events_bubble  = [
+				'blur', 'focus', 'resize', 'click', 'dblclick',
 				'change', 'select', 'submit', 'keydown', 'keypress', 'keyup',
 //				'drag', 'dragend', 'dragenter', 'dragleave', 'dragover', 'dragstart', 'drop',
 				'animationend', 'animationiteration', 'animationstart', 'transitionend'
@@ -3709,13 +3746,25 @@ new Templ8( m8.copy( { id : 'widgie.field', sourceURL : 'tpl/field.html'  }, con
 		 if ( ua.desktop )
 		 	events_bubble.push( 'mousedown', 'mouseenter', 'mouseleave', 'mousemove', 'mouseout', 'mouseover', 'mouseup' );
 
-		 events_bubble.map( function( event ) {
+		events_bubble.map( function( event ) {
 			this.on( event, '[data-' + event + ']', handleBubble );
-		}, api.$( doc ) );
+		}, api.$( ua.ie ? global : doc ) );
 
-		events_capture.map( function( event ) {
-			this.on( event, '[data-' + event + ']', handleCapture );
-		}, api.$( global ).on( 'scroll' , '[data-scroll]', handleBubble ) );
+// todo: orientationchange not working on android when passed through dinero fix this
+		if ( ua.android ) {
+			global.addEventListener( 'resize', cb_capture, true );
+			global.addEventListener( 'orientationchange', cb_capture, true );
+		}
+		else {
+			events_capture.map( function( event ) {
+				this.on( event, '[data-' + event + ']', cb_capture );
+			}, api.$( global ) );
+
+			if ( ua.ie )
+				global.addEventListener( 'scroll', cb_bubble, true );
+			else
+				api.$( ua.ie ? global : doc ).on( 'scroll', '[data-scroll]', cb_bubble );
+		}
 	}
 }();
 

@@ -70,7 +70,11 @@
 
 // public methods
 			add           : function( data, silent ) {
+				if ( !data ) return;
+
 				if ( Array.isArray( data ) ) {
+					if ( !data.length ) return;
+
 					 this.suspendChange || ++this.suspendChange;
 					 data.forEach( this.add, this );
 					!this.suspendChange || --this.suspendChange;
@@ -295,6 +299,8 @@
 
 				if ( !( data instanceof this.model ) )
 					model = this.model.create( data );
+				else
+					model = data;
 
 				if ( existing = this.data.get( model.id ) )
 					return existing;

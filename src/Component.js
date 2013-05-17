@@ -168,13 +168,9 @@
 //			!this.layout || this.layout.layout();
 			 this.broadcast( 'update' ).broadcast( 'change:dom' );
 		},
-		afterTransition : function() {
-			typeof this[this.afterEvent] != 'function' || this[this.afterEvent]();
-			delete this.afterEvent;
-		},
 		onActivate      : function() {
-			this.afterEvent = 'afterActivate';
-			this.active     = true;
+			this.onBeforeTransition( 'afterActivate' );
+			this.active = true;
 			this.$el.addClass( this.clsActive );
 		},
 		onAppend        : function( data, tpl ) {
@@ -188,12 +184,12 @@
 		},
 		onCollapse      : function() {
 			if ( !this.ready ) return;
-			this.afterEvent = 'afterCollapse';
+			this.onBeforeTransition( 'afterCollapse' );
 			this.$el.addClass( this.clsCollapsed );
 		},
 		onDeactivate    : function() {
-			this.afterEvent = 'afterDeactivate';
-			this.active     = false;
+			this.onBeforeTransition( 'afterDeactivate' );
+			this.active = false;
 			this.$el.removeClass( this.clsActive );
 		},
 		onDestroy       : function() {
@@ -210,7 +206,7 @@
 		},
 		onExpand        : function() {
 			if ( !this.ready ) return;
-			this.afterEvent = 'afterExpand';
+			this.onBeforeTransition( 'afterExpand' );
 			this.$el.removeClass( this.clsCollapsed );
 		},
 		onFocus         : function() {
@@ -219,7 +215,7 @@
 			!this.elFocus || this.elFocus.focus();
 		},
 		onHide          : function() {
-			this.afterEvent = 'afterHide';
+			this.onBeforeTransition( 'afterHide' );
 			this.$el.addClass( this.clsHidden );
 		},
 		onRender        : function() {
@@ -241,7 +237,7 @@
 			}
 		},
 		onShow          : function() {
-			this.afterEvent = 'afterShow';
+			this.onBeforeTransition( 'afterShow' );
 			this.$el.removeClass( this.clsHidden );
 		},
 		onUpdate        : function( data, tpl ) {

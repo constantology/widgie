@@ -33,7 +33,6 @@
 			} },
 // public properties
 // internal properties
-
 // public methods
 			reset        : function() {
 				!this.interactive || this.broadcast( 'before:reset' ) === false || this.onReset().broadcast( 'reset' );
@@ -77,15 +76,9 @@
 			onInvalid    : function() {
 				this.$el.removeClass( this.clsValid ).addClass( this.clsInvalid );
 			},
-			onLoad       : function() {
-				console.log( 'load: ', this, arguments );
-			},
-			onLoadError  : function() {
-				console.log( 'loadend: ', this, arguments );
-			},
-			onLoadStart  : function() {
-				console.log( 'loadstart: ', this, arguments );
-			},
+			onLoad       : function() { },
+			onLoadError  : function() { },
+			onLoadStart  : function() { },
 			onRemove     : function( item ) {
 				if ( item.parentBox === this )
 					util.remove( this.fields, item );

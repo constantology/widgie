@@ -20,11 +20,11 @@
 
 				this.changes = util.obj();
 				this.dom     = util.obj();
-				this.raw     = raw;
-				this.src     = this.schema.coerceItem( raw );
+				this.raw     = raw || util.obj();
+				this.src     = raw ? this.schema.coerceItem( raw ) : util.obj();
 
 				var schema   = this.schema,
-					id       = this.src[schema.mappings.id] || raw[schema.mappings.id];
+					id       = this.src[schema.mappings.id] || this.raw[schema.mappings.id];
 
 				this.exists  = !!id;
 				this.id      = id || 'phantom-' + ( ++count );
@@ -49,6 +49,9 @@
 				get        : function() { return !!util.len( this.changes ); },
 				set        : function() { return this.dirty; }
 			},
+// flags
+			deleted        : false,
+			syncing        : false,
 // public properties
 			changes        : null,
 			id             : null,
@@ -70,7 +73,7 @@
 					this.proxy.delete( this );
 				}
 				else
-					this.set( 'deleted', true );
+					this.deleted = true;
 			},
 			get            : function( key ) {
 				return this.src[key] === UNDEF ? null : this.src[key];
@@ -115,13 +118,21 @@
 			sync           : function() {
 				if ( this.suspendSync ) return;
 
+				this.syncing = true;
+
 				this.proxy.sync( this );
 			},
 			toJSON         : function() {
-				if ( this.destroyed )
-					return util.obj();
+				var json = util.obj();
 
-				var json = Object.reduce( this.src, toJSON.bind( this ), util.obj() );
+				if ( this.destroyed || this.deleted ) {
+					json.deleted = true;
+					return json;
+				}
+
+				json.syncing = this.syncing;
+
+				Object.reduce( this.src, toJSON.bind( this ), json );
 
 				if ( this.exists )
 					json.id = this.id;
@@ -178,7 +189,11 @@
 				}
 			},
 			onSync        : function( raw, command ) {
+				this.syncing = false;
+
 				if ( !raw ) return; // todo: throw an error?
+
+				util.remove( this.dom, Object.keys( this.dom ) );
 
 				if ( command === 'delete' )
 					return this.destroy( true );
@@ -196,12 +211,18 @@
 					this.id     = this.src.id;
 					this.exists = !!this.id;
 				}
+
+				if ( command === 'read' )
+					util.remove( this.changes, Object.keys( this.changes ) );
+
 				this/*.resumeEvents()*/.broadcast( 'sync', command, raw ).broadcast( 'change' );
 			},
 			onSyncAbort   : function( command ) {
+				this.syncing = false;
 				this.broadcast( 'sync:abort', command );
 			},
 			onSyncError   : function( err, command ) {
+				this.syncing = false;
 				this.broadcast( 'sync:error', command, err );
 			},
 			syncView       : function() {

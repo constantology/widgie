@@ -4,8 +4,12 @@
 
 	 	if ( el.length ) {
 			existing = el.attr( 'data-' + event );
-			if ( existing )
-				listener += '|' + existing;
+
+			if ( existing ) {
+				existing = existing.split( '|' );
+				if ( !~existing.indexOf( listener ) )
+					listener = existing.join( '|' ) + '|' + listener;
+			}
 
 			el.attr( 'data-' + event, listener );
 	 	}
@@ -166,7 +170,7 @@
 				if ( !!~( i = listeners.indexOf( listener ) ) )
 					listeners.splice( i, 1 );
 
-				el.attr( 'data-' + event, listeners.join( '|' ) );
+				el.attr( 'data-' + event, listeners.length ? listeners.join( '|' ) : null );
 			}
 	 	}
 

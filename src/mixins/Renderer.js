@@ -1,40 +1,41 @@
 	define( namespace( 'mixins.Renderer' ), {
 // class configuration
-		extend          : Object,
-		module          : __lib__,
+		extend             : Object,
+		module             : __lib__,
 
 // instance configuration
-		slcCt           : 'body',
-		tpl             :  Name + '.component',
+		slcCt              : 'body',
+		tpl                :  Name + '.component',
+		transitionTimeout  :  800,
 
 // flags
-		dead            : { get : function() {
+		dead               : { get : function() {
 			return this.destroyed || this.destroying;
 		} },
-		destroyed       : false,
-		destroying      : false,
-		ready           : { get : function() {
+		destroyed          : false,
+		destroying         : false,
+		ready              : { get : function() {
 			return this.rendered && !this.dead;
 		} },
-		rendered        : false,
-		rendering       : false,
+		rendered           : false,
+		rendering          : false,
 
 // properties
-		$ct             : null,
-		$el             : null,
-		ct              : null,
-		el              : null,
-		suspendUpdate   : 0,
+		$ct                : null,
+		$el                : null,
+		ct                 : null,
+		el                 : null,
+		suspendUpdate      : 0,
 
 // public methods
-		render          : function( ct ) {
+		render             : function( ct ) {
 			if ( this.ready || this.dead || this.broadcast( 'before:render' ) === false )
 				return;
 			this.rendering = true;
 			this.assignContainer( ct ).onRender().afterRender();
 			this.rendering = false;
 		},
-		prepareFragment : function( data, tpl ) {
+		prepareFragment    : function( data, tpl ) {
 			var html; // noinspection FallthroughInSwitchStatementJS
 			switch ( util.type( data ) ) {
 				case 'object'                :
@@ -55,11 +56,11 @@
 
 			return this.fragmentalize( html ? html : '' );
 		},
-		toElement       : function( tpl, data ) {
+		toElement          : function( tpl, data ) {
 			return api.$( this.parse( tpl, data ) );
 		},
 // stub methods
-		afterRender     : function() {
+		afterRender        : function() {
 			 this.broadcast( 'after:render' );
 
 			typeof this.active != 'boolean' || this[( this.active === true ? '' : 'de' ) + 'activate']();
@@ -74,17 +75,30 @@
 				}
 			}
 		},
-		onAppend        : function( frag ) {
+		afterTransition    : function() {
+			if ( this.afterEvent && this.afterEvent in this ) {
+				this.afterTransition_.cb.stop();
+				delete this.afterEvent;
+				removeDOMListener( this.$el, 'transition', 'afterTransition' );
+				typeof this[this.afterEvent] != 'function' || this[this.afterEvent]();
+			}
+		},
+		onBeforeTransition : function( method ) {
+			addDOMListener( this.$el, 'transition', 'afterTransition' );
+			this.afterEvent = method;
+			this.afterTransition_();
+		},
+		onAppend           : function( frag ) {
 			this[this.updateTarget][0].appendChild( frag );
 		},
-		onDestroy       : function() {
+		onDestroy          : function() {
 			if ( this.rendered ) {
 				this.rendered = false;
 				this.$el.remove();
 				util.remove( this, '$ct $el ct el'.split( ' ' ) );
 			}
 		},
-		onRender        : function() {
+		onRender           : function() {
 			this.createDOM();
 
 			this.$el.appendTo( this.ct );
@@ -96,12 +110,12 @@
 			if ( !( this.updateTarget in this ) )
 				this.updateTarget = this.$elCt ? '$elCt' : '$el';
 		},
-		onUpdate        : function( frag ) {
+		onUpdate           : function( frag ) {
 			this[this.updateTarget].html( null )[0].appendChild( frag );
 //			( this.$elCt || this.$el ).html( html );
 		},
 // internal methods
-		assignContainer : function( ct ) {
+		assignContainer    : function( ct ) {
 			var type = util.type( ct );
 			if ( util.exists( ct ) ) {
 				if ( type == 'element[]' )
@@ -117,8 +131,8 @@
 			if ( this.$ct )
 				this.ct = this.$ct[0];
 		},
-		createDOM       : function() {
-			this.$el = this.toElement( this.tpl, null ).attr( 'id', this.id ).data( 'transitionend', 'afterTransition' );
+		createDOM          : function() {
+			this.$el = this.toElement( this.tpl, null ).attr( 'id', this.id );
 			this.el  = this.$el[0];
 
 			!this.$el.hasClass( this.clsDefault ) || this.$el.addClass( this.clsDefault );
@@ -128,14 +142,15 @@
 				this.$elCt = api.$( this.elCt );
 			}
 		},
-		fragmentalize   : function( html ) {
+		fragmentalize      : function( html ) {
 			var frag = doc.createDocumentFragment();
 
 			api.$( html ).appendTo( frag );
 
 			return frag;
 		},
-		init            : function() {
+		init               : function() {
 			this.tpl = api.tpl.create( this.tpl );
+			this.afterTransition_ = this.afterTransition.callback( { ctx : this, delay : this.transitionTimeout + 100 } );
 		}
 	} );
